@@ -1,14 +1,2 @@
-# Core Flask dependencies
 Flask==2.3.3
 Flask-CORS==4.0.0
-
-# Essential ML libraries (Vercel-compatible versions)
-numpy==1.24.3
-pandas==2.0.3
-scikit-learn==1.3.0
-
-# Simplified audio processing (optional for Vercel)
-# librosa==0.10.1  # Commented out for Vercel compatibility
-
-# Data utilities
-joblib==1.3.2
