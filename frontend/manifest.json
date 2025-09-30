@@ -1,0 +1,62 @@
+{
+  "name": "Parkinson's Disease Detection PWA",
+  "short_name": "Parkinson's Detection",
+  "description": "AI-powered multimodal Parkinson's disease detection using voice and tremor analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#2196F3",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "assets/icon-144.svg",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["health", "medical", "utilities"],
+  "screenshots": [
+    {
+      "src": "assets/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "assets/screenshot-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Test",
+      "short_name": "Test",
+      "description": "Start a new Parkinson's detection test",
+      "url": "/?action=test",
+      "icons": [
+        {
+          "src": "assets/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

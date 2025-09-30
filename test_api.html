@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Parkinson's Detection API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Test 1: Health endpoint
+                console.log('Testing health endpoint...');
+                const healthResponse = await fetch('http://localhost:5000/api/health');
+                const healthData = await healthResponse.json();
+                resultsDiv.innerHTML += '<h3>Health Test: ✅ PASSED</h3>';
+                resultsDiv.innerHTML += '<pre>' + JSON.stringify(healthData, null, 2) + '</pre>';
+                
+                // Test 2: Models info endpoint
+                console.log('Testing models info endpoint...');
+                const modelsResponse = await fetch('http://localhost:5000/api/models/info');
+                const modelsData = await modelsResponse.json();
+                resultsDiv.innerHTML += '<h3>Models Info Test: ✅ PASSED</h3>';
+                resultsDiv.innerHTML += '<pre>' + JSON.stringify(modelsData, null, 2) + '</pre>';
+                
+                // Test 3: Demo endpoint
+                console.log('Testing demo endpoint...');
+                const demoResponse = await fetch('http://localhost:5000/api/demo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+                const demoData = await demoResponse.json();
+                resultsDiv.innerHTML += '<h3>Demo Test: ✅ PASSED</h3>';
+                resultsDiv.innerHTML += '<pre>' + JSON.stringify(demoData, null, 2) + '</pre>';
+                
+                // Test 4: Analyze endpoint with form data
+                console.log('Testing analyze endpoint...');
+                const formData = new FormData();
+                formData.append('audio', new Blob(['test audio data'], { type: 'audio/webm' }), 'test.webm');
+                formData.append('motion_data', JSON.stringify([1, 2, 3, 4, 5]));
+                formData.append('test_mode', 'both');
+                
+                const analyzeResponse = await fetch('http://localhost:5000/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                const analyzeData = await analyzeResponse.json();
+                resultsDiv.innerHTML += '<h3>Analyze Test: ✅ PASSED</h3>';
+                resultsDiv.innerHTML += '<pre>' + JSON.stringify(analyzeData, null, 2) + '</pre>';
+                
+                resultsDiv.innerHTML += '<h2>🎉 ALL API TESTS PASSED!</h2>';
+                
+            } catch (error) {
+                resultsDiv.innerHTML += '<h3>❌ TEST FAILED</h3>';
+                resultsDiv.innerHTML += '<pre>Error: ' + error.message + '</pre>';
+                console.error('Test failed:', error);
+            }
+        }
+        
+        // Run tests when page loads
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

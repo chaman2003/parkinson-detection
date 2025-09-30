@@ -1,0 +1,19 @@
+PS C:\Users\chama\OneDrive\Desktop\parkinson> cd frontend; python -m http.server 8080
+Serving HTTP on :: port 8080 (http://[::]:8080/) ...
+::1 - - [30/Sep/2025 19:10:37] "GET / HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET /app.js HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET /styles.css HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET /sw.js HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET / HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET /index.html HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET /styles.css HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] "GET /app.js HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] code 404, message File not found
+::1 - - [30/Sep/2025 19:10:38] "GET /assets/icon-192.png HTTP/1.1" 404 -
+::1 - - [30/Sep/2025 19:10:38] "GET /manifest.json HTTP/1.1" 200 -
+::1 - - [30/Sep/2025 19:10:38] code 404, message File not found
+::1 - - [30/Sep/2025 19:10:38] "GET /assets/icon-512.png HTTP/1.1" 404 -   
+::1 - - [30/Sep/2025 19:10:38] code 404, message File not found
+::1 - - [30/Sep/2025 19:10:38] "GET /assets/icon-192.png HTTP/1.1" 404 -
+::1 - - [30/Sep/2025 19:10:38] code 404, message File not found
+::1 - - [30/Sep/2025 19:10:38] "GET /assets/icon-144.png HTTP/1.1" 404 -

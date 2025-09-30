@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="url(#grad1)"/>
+  <circle cx="256" cy="200" r="80" fill="white" opacity="0.9"/>
+  <path d="M256 120 C230 120, 208 142, 208 168 C208 194, 230 216, 256 216 C282 216, 304 194, 304 168 C304 142, 282 120, 256 120 Z" fill="#667eea"/>
+  <circle cx="236" cy="168" r="8" fill="white"/>
+  <circle cx="276" cy="168" r="8" fill="white"/>
+  <path d="M230 190 Q256 210 282 190" stroke="white" stroke-width="6" fill="none"/>
+  <text x="256" y="350" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="white">Parkinson's</text>
+  <text x="256" y="390" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="white" opacity="0.8">Detection PWA</text>
+  <circle cx="150" cy="420" r="4" fill="white" opacity="0.6"/>
+  <circle cx="180" cy="440" r="3" fill="white" opacity="0.4"/>
+  <circle cx="330" cy="420" r="4" fill="white" opacity="0.6"/>
+  <circle cx="360" cy="440" r="3" fill="white" opacity="0.4"/>
+</svg>
