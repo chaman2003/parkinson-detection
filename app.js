@@ -11,8 +11,8 @@ class ParkinsonDetectionApp {
         this.testProgress = 0;
         this.selectedTestMode = 'both'; // 'voice', 'tremor', or 'both'
         
-        // API Configuration
-        this.API_BASE_URL = 'http://localhost:5000/api';
+        // API Configuration - Environment aware
+        this.API_BASE_URL = this.getApiBaseUrl();
         this.DEMO_MODE = false; // Will be set to true if backend is unavailable
         
         this.init();
@@ -165,6 +165,27 @@ class ParkinsonDetectionApp {
         this.testProgress = percentage;
         document.getElementById('progress-fill').style.width = percentage + '%';
         document.getElementById('progress-text').textContent = text;
+    }
+
+    // API Configuration Method
+    getApiBaseUrl() {
+        // Check if we're running on Vercel or production
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        // For development
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+        }
+        
+        // For Vercel deployment - you'll replace this with your actual backend URL
+        // Format: https://your-backend-name.vercel.app/api
+        if (hostname.includes('vercel.app')) {
+            return `${protocol}//${hostname}/api`;
+        }
+        
+        // Default fallback
+        return `${protocol}//${hostname}/api`;
     }
 
     // Backend Availability Check
