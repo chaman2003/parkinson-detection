@@ -2,23 +2,13 @@
 Flask==2.3.3
 Flask-CORS==4.0.0
 
-# Machine Learning libraries
-scikit-learn==1.3.0
-xgboost==1.7.6
+# Essential ML libraries (Vercel-compatible versions)
 numpy==1.24.3
 pandas==2.0.3
-scipy==1.11.1
+scikit-learn==1.3.0
 
-# Audio processing
-librosa==0.10.1
-soundfile==0.12.1
+# Simplified audio processing (optional for Vercel)
+# librosa==0.10.1  # Commented out for Vercel compatibility
 
-# Data serialization and utilities
+# Data utilities
 joblib==1.3.2
-
-# Development and testing
-pytest==7.4.0
-pytest-flask==1.2.0
-
-# Optional: for better performance
-numba==0.57.1

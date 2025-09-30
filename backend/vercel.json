@@ -1,19 +1,15 @@
 {
   "version": 2,
-  "name": "parkinson-detection-backend",
   "builds": [
     {
-      "src": "app.py",
+      "src": "app_vercel.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "app.py"
+      "dest": "app_vercel.py"
     }
-  ],
-  "env": {
-    "PYTHONPATH": "$PYTHONPATH:/var/task"
-  }
+  ]
 }
