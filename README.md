@@ -1,113 +1,224 @@
-# 🧠 Parkinson's Disease Detection System# 🧠 Parkinson's Disease Detection System# 🧠 Parkinson's Disease Detection System# 🧠 Parkinson's Detection PWA
+# Parkinson's Disease Detection System# 🧠 Parkinson's Disease Detection System# 🧠 Parkinson's Disease Detection System# 🧠 Parkinson's Disease Detection System# 🧠 Parkinson's Detection PWA
 
 
 
-<div align="center">
+AI-powered early detection using voice and motion analysis. Real-time ML inference with 350+ biomarker features and ensemble algorithms.
 
 
 
-**AI-Powered Early Detection Using Voice & Motion Analysis**> **AI-Powered Medical Analysis Using Voice & Motion Detection**  
+## Overview<div align="center">
 
 
 
-[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/)> Real-time ML inference with 350+ features and ensemble algorithms
+Progressive Web Application for Parkinson's disease detection using multimodal AI analysis combining voice recordings and motion sensor data.
+
+
+
+**Key Features:****AI-Powered Early Detection Using Voice & Motion Analysis**> **AI-Powered Medical Analysis Using Voice & Motion Detection**  
+
+- Voice Analysis: 150+ audio features (MFCC, spectral, prosodic, voice quality)
+
+- Tremor Detection: 200+ motion features (FFT analysis, 4-6 Hz tremor band)
+
+- Ensemble ML: SVM, Random Forest, Gradient Boosting, XGBoost
+
+- Processing Time: 3-5 seconds with real-time results[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/)> Real-time ML inference with 350+ features and ensemble algorithms
+
+- PWA Support: Offline functionality, installable on mobile devices
 
 [![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg)](https://flask.palletsprojects.com/)
 
+## Quick Start
+
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)> **AI-Powered Medical Analysis Using Voice & Motion Detection**  A **Progressive Web Application** for early Parkinson's disease detection using AI-powered multimodal analysis of voice and tremor patterns.
 
+**Prerequisites:** Python 3.13+, microphone access, motion sensors (mobile recommended)
 
+
+
+**Installation:** Clone repository, create virtual environment, install dependencies from backend/requirements.txt
 
 *Real-time machine learning analysis with 350+ biomarker features*---
 
+**Running:** Execute python app.py in backend directory. First run auto-generates 1000 training samples and trains models (30 seconds). Subsequent runs load cached models instantly. Server starts on localhost:5000. Open frontend/index.html in browser.
 
+
+
+## Project Structure
 
 </div>> Real-time ML inference with 350+ features and ensemble algorithms
 
+- README.md - Documentation
 
+- backend/ - Python ML backend (app.py, ml_models.py, audio_features.py, tremor_features.py, requirements.txt, models/)
+
+- frontend/ - Web application (index.html, app.js, styles.css, assets/)
 
 ---## 📋 Table of Contents
 
+## Technical Details
 
+
+
+**Audio Features (150+):** MFCC (13 coefficients + deltas), Spectral (centroid, bandwidth, rolloff, zero-crossing), Prosodic (F0, jitter, shimmer), Voice Quality (HNR), Temporal (onset strength, tempo), Harmonic (chroma, tonnetz)
 
 ## 🎯 Overview## 🎯 Features
 
+**Motion Features (200+):** Frequency Domain (FFT, 4-6 Hz tremor detection), Time Domain (acceleration statistics XYZ), Statistical (mean, std, variance, skewness, kurtosis), Tremor-Specific (amplitude, zero-crossing, jerk), Stability (postural stability index, path length)
 
+
+
+**ML Pipeline:** Ensemble classifier with soft voting. Four algorithms: SVM (RBF kernel), Random Forest (200 trees, depth 20), Gradient Boosting (150 estimators, lr 0.1), XGBoost (200 estimators, GPU support). 5-fold cross-validation, StandardScaler normalization, pickle-based caching.
 
 A Progressive Web Application (PWA) for early Parkinson's disease detection using multimodal AI analysis. The system combines advanced voice analysis and motion sensor data to provide real-time predictions.1. [Overview](#overview)
 
+**Training:** Synthetic data generation (1000 samples, 500 healthy + 500 affected). Voice Model CV Accuracy 100%, Tremor Model CV Accuracy 100%. Training time 30 seconds first run.
 
+
+
+## API Reference
 
 ### Key Features2. [Quick Start](#quick-start)---
 
+**Base URL:** localhost:5000/api
 
+
+
+**GET /api/health** - Health check (returns status, timestamp, version)
 
 - 🎤 **Voice Analysis** - 150+ audio features (MFCC, spectral, prosodic, voice quality)3. [System Architecture](#system-architecture)
 
+**POST /api/analyze** - Main analysis endpoint. Send audio file (WebM/WAV/MP3) and motion_data JSON array with timestamp, accelerationX/Y/Z, rotationAlpha/Beta/Gamma. Returns prediction, confidence scores (overall, voice, tremor), features (Voice Stability, Tremor Frequency, Voice Quality, Postural Stability), metadata (processing_time, feature counts, model_type).
+
 - 📱 **Tremor Detection** - 200+ motion features (FFT analysis, 4-6 Hz tremor band)
+
+**GET /api/models/info** - Model information (algorithms, features, training status)
 
 - 🤖 **Ensemble ML** - 4 algorithms: SVM, Random Forest, Gradient Boosting, XGBoost4. [Features](#features)- **🎤 Voice Analysis**: Advanced audio processing using MFCC, spectral, and prosodic features
 
+## Development
+
 - ⚡ **Real-time Results** - 3-5 second analysis with 100% training accuracy
+
+**Custom Training:** Replace generate_training_data() function in backend/app.py with your dataset loader. Load voice_data (n_samples x 150), tremor_data (n_samples x 200), labels (0=healthy, 1=affected). Delete backend/models/*.pkl and restart app.py.
 
 - 🔄 **PWA Support** - Offline functionality, installable on mobile devices5. [API Documentation](#api-documentation)
 
+**ML Customization:** Edit backend/ml_models.py to adjust hyperparameters (C, gamma for SVM, n_estimators for Random Forest, learning_rate for boosting) or add new algorithms (Neural Networks, Deep Learning models).
 
+
+
+**Frontend Customization:** Modify frontend/index.html for UI changes, frontend/app.js for logic updates, recording durations, or API endpoint modifications.
 
 ---6. [Development](#development)## 📋 Table of Contents- **📱 Tremor Detection**: High-precision motion sensor analysis (3-12 Hz tremor band)
 
-
-
-## 🚀 Quick Start7. [Model Information](#model-information)
-
-
-
-### Prerequisites8. [Troubleshooting](#troubleshooting)- **🤖 AI Models**: Ensemble machine learning (Random Forest + SVM + XGBoost)
+## Model Performance
 
 
 
-- Python 3.13+
+Voice Model: 100% accuracy (5-fold CV, synthetic data)
 
-- Microphone access
+Tremor Model: 100% accuracy (5-fold CV, synthetic data)## 🚀 Quick Start7. [Model Information](#model-information)
 
-- Motion sensors (mobile device recommended)---1. [Overview](#overview)- **📊 Real-time Quality Monitoring**: Live data quality indicators and metrics
+Training Time: 30 seconds (first run only)
 
+Model Size: 20-40 MB total
 
+Top Voice Features: Jitter, Shimmer, MFCC, HNR, F0 variation
 
-### Installation
-
-
-
-```bash## 🎯 Overview2. [Quick Start](#quick-start)- **🔄 PWA Capabilities**: Offline functionality, installable interface
-
-# Clone repository
-
-git clone https://github.com/chaman2003/parkinson-detection.git
-
-cd parkinson-detection
-
-A comprehensive web-based Parkinson's disease detection system that uses:3. [System Architecture](#system-architecture)- **🎛️ Test Modes**: Voice-only, tremor-only, or complete analysis options
-
-# Create virtual environment
-
-python -m venv .venv- **Voice Analysis**: 150+ audio features (MFCC, spectral, prosodic, voice quality)
-
-.venv\Scripts\activate  # Windows
-
-source .venv/bin/activate  # Linux/Mac- **Tremor Detection**: 200+ motion features (FFT, time/frequency domain, statistical)4. [Features](#features)
+Top Tremor Features: 4-6 Hz PSD, dominant frequency, acceleration variance### Prerequisites8. [Troubleshooting](#troubleshooting)- **🤖 AI Models**: Ensemble machine learning (Random Forest + SVM + XGBoost)
 
 
 
-# Install dependencies- **Ensemble ML**: 4 algorithms (SVM, Random Forest, Gradient Boosting, XGBoost)
-
-pip install -r backend/requirements.txt
-
-```- **Real-time Analysis**: 3-5 second processing with 100% training accuracy5. [API Documentation](#api-documentation)## 🚀 Live Demo
+Note: Accuracies based on synthetic data. Real clinical data will yield lower accuracies.
 
 
 
-### Running the Application
+## Troubleshooting- Python 3.13+
 
+
+
+**Missing modules:** Install requirements.txt- Microphone access
+
+**Port 5000 in use:** Kill process or change port in app.py
+
+**Microphone not working:** Check browser permissions, use localhost/HTTPS, try Chrome/Edge- Motion sensors (mobile device recommended)---1. [Overview](#overview)- **📊 Real-time Quality Monitoring**: Live data quality indicators and metrics
+
+**Motion sensors not detected:** Use mobile device with gyroscope, enable permissions
+
+**Models not loading:** Delete models/*.pkl and restart
+
+**Training too long:** Normal for first run (30 seconds), reduce n_samples in generate_training_data()
+
+**Low accuracy:** Current models use synthetic data, train with real clinical data for production### Installation
+
+
+
+## System Requirements
+
+
+
+**Minimum:** Dual-core 2.0 GHz CPU, 2 GB RAM, 500 MB storage, Python 3.13+, modern browser```bash## 🎯 Overview2. [Quick Start](#quick-start)- **🔄 PWA Capabilities**: Offline functionality, installable interface
+
+**Recommended:** Quad-core 3.0 GHz CPU, 4 GB RAM, 1 GB storage (SSD), GPU for XGBoost acceleration
+
+**Dependencies:** Flask 3.0+, Flask-CORS 4.0+, numpy 1.24+, pandas 2.0+, scikit-learn 1.3+, xgboost 2.0+, librosa 0.10+, scipy 1.11+# Clone repository
+
+
+
+## Production Deploymentgit clone https://github.com/chaman2003/parkinson-detection.git
+
+
+
+**For Clinical Use:** Collaborate with medical institutions, obtain ethical approval and patient consent, record voice and motion from diagnosed patients, include healthy control group, balance dataset.cd parkinson-detection
+
+
+
+**Retraining:** Load clinical dataset, extract features, train with ParkinsonMLPipeline, validate with holdout test set (20%), calculate sensitivity/specificity.A comprehensive web-based Parkinson's disease detection system that uses:3. [System Architecture](#system-architecture)- **🎛️ Test Modes**: Voice-only, tremor-only, or complete analysis options
+
+
+
+**Deployment:** Use production WSGI server (gunicorn with 4 workers on port 5000).# Create virtual environment
+
+
+
+**Security:** Enable HTTPS (SSL/TLS), implement authentication, encrypt data, ensure HIPAA compliance, conduct regular audits.python -m venv .venv- **Voice Analysis**: 150+ audio features (MFCC, spectral, prosodic, voice quality)
+
+
+
+**Scaling:** Load balancer (nginx), multiple Flask instances, Redis for sessions, database for results. Optimize with model quantization, feature selection, caching, async processing (Celery)..venv\Scripts\activate  # Windows
+
+
+
+## License and Disclaimersource .venv/bin/activate  # Linux/Mac- **Tremor Detection**: 200+ motion features (FFT, time/frequency domain, statistical)4. [Features](#features)
+
+
+
+This project is for educational and research purposes only. Not a medical diagnostic tool. Always consult qualified healthcare professionals for medical diagnosis and treatment. Do not use for self-diagnosis or medical decisions. For clinical use, obtain necessary certifications and medical professional oversight.
+
+
+
+## Contributing# Install dependencies- **Ensemble ML**: 4 algorithms (SVM, Random Forest, Gradient Boosting, XGBoost)
+
+
+
+Contributions welcome. Areas: Real clinical data integration, deep learning models (CNN/LSTM), mobile app development, multi-language support, additional biomarker analysis.pip install -r backend/requirements.txt
+
+
+
+## Acknowledgments```- **Real-time Analysis**: 3-5 second processing with 100% training accuracy5. [API Documentation](#api-documentation)## 🚀 Live Demo
+
+
+
+Built with research from Parkinson's disease detection literature, voice analysis studies (jitter, shimmer, HNR), tremor frequency research (4-6 Hz resting tremor), and ML ensemble methods.
+
+
+
+---### Running the Application
+
+
+
+Report bugs or request features via GitHub issues.
 
 
 ```bash### Technology Stack6. [Development](#development)
