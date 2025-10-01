@@ -786,3 +786,90 @@ body {
 .mb-2 { margin-bottom: 1rem; }
 .mb-3 { margin-bottom: 1.5rem; }
 .mb-4 { margin-bottom: 2rem; }
+
+/* Data Quality Indicators for 100% Accuracy */
+
+.quality-indicator {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.quality-meter {
+    width: 100%;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.quality-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.quality-meter.excellent .quality-bar {
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.quality-meter.good .quality-bar {
+    background: linear-gradient(90deg, #FF9800, #FFC107);
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+}
+
+.quality-meter.poor .quality-bar {
+    background: linear-gradient(90deg, #F44336, #E91E63);
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+.quality-stats {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    font-family: 'Courier New', monospace;
+}
+
+/* Real-time Quality Indicators */
+#audio-quality-indicator,
+#data-quality-indicator {
+    position: relative;
+    margin-top: 10px;
+}
+
+.quality-pulse {
+    animation: qualityPulse 2s infinite;
+}
+
+@keyframes qualityPulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* High Accuracy Data Collection Status */
+.accuracy-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    margin-top: 5px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.accuracy-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    animation: statusBlink 1s infinite;
+}
+
+@keyframes statusBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}

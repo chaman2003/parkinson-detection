@@ -4,15 +4,15 @@ const API_CACHE_NAME = 'parkinson-api-v1.0.0';
 
 // Files to cache for offline functionality
 const STATIC_CACHE_FILES = [
-    '/frontend/',
-    '/frontend/index.html',
-    '/frontend/styles.css',
-    '/frontend/app.js',
-    '/frontend/manifest.json',
+    '/',
+    '/index.html',
+    '/styles.css',
+    '/app.js',
+    '/manifest.json',
     // SVG icon files
-    '/frontend/assets/icon-144.svg',
-    '/frontend/assets/icon-192.svg',
-    '/frontend/assets/icon-512.svg'
+    '/assets/icon-144.svg',
+    '/assets/icon-192.svg',
+    '/assets/icon-512.svg'
 ];
 
 // API endpoints to cache
