@@ -9,10 +9,14 @@ import pickle
 from datetime import datetime
 import logging
 
-# Change to the directory where this script is located
-# This ensures all relative paths work correctly regardless of where the script is run from
+# Change to the backend directory where all data and models are stored
+# This ensures all relative paths work correctly
 script_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_dir)
+backend_dir = os.path.join(script_dir, 'backend')
+os.chdir(backend_dir)
+
+# Add backend to Python path for imports
+sys.path.insert(0, backend_dir)
 
 # Import ML models and data utilities from core package
 from core.ml_models import ParkinsonMLPipeline

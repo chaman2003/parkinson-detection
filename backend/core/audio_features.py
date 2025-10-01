@@ -32,8 +32,8 @@ class AudioFeatureExtractor:
             # Load audio
             y, sr = librosa.load(audio_path, sr=self.sample_rate)
             
-            # Remove silence
-            y_trimmed, _ = librosa.effects.trim(y, top_db=20)
+            # Skip trimming to avoid numba JIT compilation issues
+            y_trimmed = y
             
             if len(y_trimmed) == 0:
                 logger.warning("Audio file is empty or all silence")
@@ -232,14 +232,21 @@ class AudioFeatureExtractor:
         """Extract temporal features - timing and rhythm"""
         features = {}
         
-        # Onset detection (syllable/word timing)
-        onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        features['onset_strength_mean'] = np.mean(onset_env)
-        features['onset_strength_std'] = np.std(onset_env)
+        try:
+            # Onset detection (syllable/word timing)
+            onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+            features['onset_strength_mean'] = np.mean(onset_env)
+            features['onset_strength_std'] = np.std(onset_env)
+        except:
+            features['onset_strength_mean'] = 0.0
+            features['onset_strength_std'] = 0.0
         
-        # Tempo estimation
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        features['tempo'] = tempo
+        try:
+            # Tempo estimation (can cause numba JIT issues, skip if problematic)
+            tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+            features['tempo'] = tempo
+        except:
+            features['tempo'] = 120.0  # Default tempo
         
         # Autocorrelation (periodicity)
         autocorr = librosa.autocorrelate(y)

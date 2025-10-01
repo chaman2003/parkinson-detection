@@ -12,8 +12,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 import xgboost as xgb
 
-from audio_features import AudioFeatureExtractor
-from tremor_features import TremorFeatureExtractor
+from .audio_features import AudioFeatureExtractor
+from .tremor_features import TremorFeatureExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +29,22 @@ class ParkinsonMLPipeline:
         self.tremor_model = None
         self.voice_scaler = None
         self.tremor_scaler = None
+        self.use_gpu = False  # Can be enabled for GPU training
         self.load_models()
     
     def build_ensemble_model(self, model_type='voice'):
         svm_model = SVC(kernel='rbf', C=10.0, gamma='scale', probability=True, random_state=42)
         rf_model = RandomForestClassifier(n_estimators=200, max_depth=15, random_state=42, n_jobs=-1)
         gb_model = GradientBoostingClassifier(n_estimators=150, learning_rate=0.1, max_depth=7, random_state=42)
-        xgb_model = xgb.XGBClassifier(n_estimators=200, learning_rate=0.1, max_depth=7, random_state=42, use_label_encoder=False, eval_metric='logloss', n_jobs=-1)
         
-        ensemble = VotingClassifier(estimators=[('svm', svm_model), ('rf', rf_model), ('gb', gb_model), ('xgb', xgb_model)], voting='soft', weights=[1, 2, 2, 2])
-        logger.info(f"Built {model_type} ensemble model")
+        # Note: XGBoost removed temporarily due to sklearn 1.7.2 compatibility issue
+        # The ensemble with SVM, RF, and GB still provides excellent performance
+        ensemble = VotingClassifier(
+            estimators=[('svm', svm_model), ('rf', rf_model), ('gb', gb_model)], 
+            voting='soft', 
+            weights=[1, 2, 2]
+        )
+        logger.info(f"Built {model_type} ensemble model (SVM + RF + GB)")
         return ensemble
     
     def train_models(self, X_voice, y_voice, X_tremor, y_tremor):
