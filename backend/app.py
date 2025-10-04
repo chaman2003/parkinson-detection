@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import os
 import sys
@@ -8,30 +8,121 @@ import librosa
 import pickle
 from datetime import datetime
 import logging
+import time
+from queue import Queue
+import threading
 
 # Change to the directory where this script is located
 # This ensures all relative paths work correctly regardless of where the script is run from
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-# Import ML models and data utilities from core package
-from core.ml_models import ParkinsonMLPipeline
-from core.data_loader import DatasetLoader, load_single_voice_file
-from core.data_storage import DataStorageManager
-from core.audio_features import AudioFeatureExtractor
-from core.tremor_features import TremorFeatureExtractor
+# Import ML models and data utilities from utils package
+from utils.ml_models import ParkinsonMLPipeline
+from utils.data_loader import DatasetLoader, load_single_voice_file
+from utils.data_storage import DataStorageManager
+from utils.audio_features_optimized import OptimizedAudioExtractor
+from utils.tremor_features_optimized import OptimizedTremorExtractor
+from utils.dataset_matcher import DatasetMatcher
 
-# Configure logging
+# Configure logging - disable colors on Windows to avoid ANSI codes
+import sys
+if sys.platform == 'win32':
+    # Disable colored output on Windows
+    os.environ['TERM'] = 'dumb'
+    
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Disable Flask/Werkzeug colored output
+import click
+click.echo = lambda x, **kwargs: print(x)
+
+def make_json_serializable(obj):
+    """
+    Convert numpy arrays and other non-serializable objects to JSON-compatible types
+    This is needed because ML models return numpy arrays which can't be directly sent as JSON
+    """
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: make_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [make_json_serializable(item) for item in obj]
+    elif isinstance(obj, (np.integer, np.floating)):
+        return float(obj)
+    else:
+        return obj
+
+def convert_webm_to_wav(webm_path, wav_path):
+    """
+    Convert WebM audio file to WAV format using available tools
+    Returns True if successful, False otherwise
+    """
+    try:
+        # Try method 1: pydub with ffmpeg
+        from pydub import AudioSegment
+        audio = AudioSegment.from_file(webm_path, format="webm")
+        audio.export(wav_path, format="wav", parameters=["-ar", "22050"])
+        return True
+    except Exception as e:
+        logger.warning(f"pydub conversion failed: {str(e)}")
+        
+        try:
+            # Try method 2: Use subprocess with ffmpeg if available
+            import subprocess
+            result = subprocess.run(
+                ['ffmpeg', '-y', '-i', webm_path, '-acodec', 'pcm_s16le', '-ar', '22050', wav_path],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0:
+                return True
+            else:
+                logger.warning(f"ffmpeg conversion failed: {result.stderr}")
+        except FileNotFoundError:
+            logger.warning("ffmpeg not found in system PATH")
+        except Exception as e:
+            logger.warning(f"ffmpeg conversion error: {str(e)}")
+        
+        try:
+            # Try method 3: Direct librosa load with audioread (may work with some WebM files)
+            import soundfile as sf
+            y, sr = librosa.load(webm_path, sr=22050)
+            sf.write(wav_path, y, sr)
+            return True
+        except Exception as e:
+            logger.warning(f"librosa/soundfile conversion failed: {str(e)}")
+    
+    return False
+
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend communication
+
+# Configure Flask for streaming and large file handling
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
+app.config['THREADED'] = True  # Enable threading for concurrent requests
+
+# Enable CORS for all origins (needed for ngrok tunnels)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "expose_headers": ["Content-Type", "Cache-Control", "X-Accel-Buffering"]
+    }
+})
 
 # Initialize utilities
-storage_manager = DataStorageManager()
-audio_extractor = AudioFeatureExtractor()
-tremor_extractor = TremorFeatureExtractor()
+try:
+    storage_manager = DataStorageManager()
+    audio_extractor = OptimizedAudioExtractor()
+    tremor_extractor = OptimizedTremorExtractor()
+    logger.info("✓ Utilities initialized successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to initialize utilities: {str(e)}")
+    raise  # Re-raise to prevent app from starting with broken components
 
 
 def check_and_train_models():
@@ -87,7 +178,9 @@ def check_and_train_models():
                 print(f"   Processing {i+1}/{len(voice_files)}...")
             
             try:
-                features = audio_extractor.extract_all_features(str(voice_file))
+                features = audio_extractor.extract_features_fast(str(voice_file))
+                # Remove insights before converting to vector
+                features.pop('_insights', None)
                 feature_vector = np.array(list(features.values()))
                 
                 # Set expected feature count from first successful extraction
@@ -162,9 +255,27 @@ def check_and_train_models():
 
 
 # Initialize ML pipeline and train if needed
-logger.info("Initializing Parkinson's Detection ML Pipeline...")
-ml_pipeline = ParkinsonMLPipeline()
-check_and_train_models()
+try:
+    logger.info("Initializing Parkinson's Detection ML Pipeline...")
+    ml_pipeline = ParkinsonMLPipeline()
+    check_and_train_models()
+    logger.info("✓ ML Pipeline initialized successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to initialize ML Pipeline: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    raise  # Re-raise to prevent app from starting with broken ML components
+
+# Initialize dataset matcher for identifying known samples
+try:
+    logger.info("Initializing Dataset Matcher...")
+    dataset_matcher = DatasetMatcher()
+    logger.info("✓ Dataset Matcher initialized successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to initialize Dataset Matcher: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    raise  # Re-raise to prevent app from starting with broken components
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
@@ -174,6 +285,11 @@ if not os.path.exists(UPLOAD_FOLDER):
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint for testing"""
+    return jsonify({'message': 'Parkinson Detection API is running', 'status': 'ok'})
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -182,6 +298,340 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'version': '1.0.0'
     })
+
+@app.route('/api/analyze-stream', methods=['POST'])
+def analyze_data_stream():
+    """
+    Streaming endpoint for real-time analysis progress
+    Streams processing steps to frontend as Server-Sent Events (SSE)
+    """
+    def generate():
+        try:
+            # Send initial heartbeat to establish connection
+            yield ": heartbeat\n\n"
+            
+            # Get test mode (voice, tremor, or both)
+            test_mode = request.form.get('test_mode', 'both')
+            
+            # Validate based on test mode
+            has_audio = 'audio' in request.files
+            has_motion = 'motion_data' in request.form
+            
+            # Voice-only test
+            if test_mode == 'voice':
+                if not has_audio:
+                    yield f"data: {json.dumps({'error': 'No audio file provided for voice test'})}\n\n"
+                    return
+                motion_data_str = None
+            
+            # Tremor-only test
+            elif test_mode == 'tremor':
+                if not has_motion:
+                    yield f"data: {json.dumps({'error': 'No motion data provided for tremor test'})}\n\n"
+                    return
+                audio_file = None
+                motion_data_str = request.form['motion_data']
+            
+            # Both tests
+            else:
+                if not has_audio:
+                    yield f"data: {json.dumps({'error': 'No audio file provided'})}\n\n"
+                    return
+                if not has_motion:
+                    yield f"data: {json.dumps({'error': 'No motion data provided'})}\n\n"
+                    return
+                motion_data_str = request.form['motion_data']
+
+            # Get audio file if provided
+            if has_audio:
+                audio_file = request.files['audio']
+            else:
+                audio_file = None
+            
+            # Send initial status
+            yield f"data: {json.dumps({'status': 'validating', 'message': f'🔍 Validating {test_mode} test data...'})}\n\n"
+            time.sleep(0.2)
+            
+            # Validate audio file (if voice or both)
+            if audio_file:
+                if audio_file.filename == '':
+                    yield f"data: {json.dumps({'error': 'No audio file selected'})}\n\n"
+                    return
+
+                allowed_extensions = {'webm', 'wav', 'mp3', 'ogg'}
+                file_ext = audio_file.filename.rsplit('.', 1)[1].lower() if '.' in audio_file.filename else ''
+                if file_ext not in allowed_extensions:
+                    yield f"data: {json.dumps({'error': 'Invalid audio file format'})}\n\n"
+                    return
+
+            # Parse and validate motion data (if tremor or both)
+            motion_data = None
+            valid_samples = 0
+            
+            if motion_data_str:
+                try:
+                    motion_data = json.loads(motion_data_str)
+                    
+                    logger.info(f"Received motion data: {len(motion_data)} samples")
+                    
+                    if not isinstance(motion_data, list):
+                        logger.error(f"Motion data is not a list: {type(motion_data)}")
+                        yield f"data: {json.dumps({'error': 'Invalid motion data format - expected list'})}\n\n"
+                        return
+                    
+                    # Debug: Log first sample to see structure
+                    if len(motion_data) > 0:
+                        logger.info(f"First sample structure: {motion_data[0]}")
+                        logger.info(f"First sample keys: {list(motion_data[0].keys()) if isinstance(motion_data[0], dict) else 'Not a dict'}")
+                    
+                    if len(motion_data) < 50:
+                        logger.warning(f"Insufficient motion data samples: {len(motion_data)} < 50")
+                        yield f"data: {json.dumps({'error': f'Insufficient motion data: {len(motion_data)} samples (need at least 50). Please hold device steady and collect for 10-15 seconds.'})}\n\n"
+                        return
+                    
+                    # Validate samples - be very lenient
+                    for i, sample in enumerate(motion_data):
+                        if not isinstance(sample, dict):
+                            if i < 5:
+                                logger.warning(f"Sample {i} is not a dict: {type(sample)} = {sample}")
+                            continue
+                            
+                        # Check required fields - support both formats
+                        has_timestamp = 'timestamp' in sample
+                        
+                        # Check for both accelerationX/Y/Z and x/y/z formats
+                        has_accel_format = ('accelerationX' in sample and 'accelerationY' in sample and 'accelerationZ' in sample)
+                        has_xyz_format = ('x' in sample and 'y' in sample and 'z' in sample)
+                        
+                        if i < 3:  # Log first 3 samples for debugging
+                            logger.info(f"Sample {i}: timestamp={has_timestamp}, accel_format={has_accel_format}, xyz_format={has_xyz_format}")
+                            logger.info(f"Sample {i} data: {sample}")
+                        
+                        if has_timestamp and (has_accel_format or has_xyz_format):
+                            # Get values from either format
+                            if has_accel_format:
+                                x_val = sample.get('accelerationX')
+                                y_val = sample.get('accelerationY')
+                                z_val = sample.get('accelerationZ')
+                            else:  # has_xyz_format
+                                x_val = sample.get('x')
+                                y_val = sample.get('y')
+                                z_val = sample.get('z')
+                            
+                            # Check if values are numeric (including 0)
+                            x_numeric = isinstance(x_val, (int, float)) and not isinstance(x_val, bool)
+                            y_numeric = isinstance(y_val, (int, float)) and not isinstance(y_val, bool)
+                            z_numeric = isinstance(z_val, (int, float)) and not isinstance(z_val, bool)
+                            
+                            if i < 3:
+                                logger.info(f"Sample {i} numeric check: x={x_numeric} ({type(x_val)}), y={y_numeric} ({type(y_val)}), z={z_numeric} ({type(z_val)})")
+                            
+                            if x_numeric and y_numeric and z_numeric:
+                                valid_samples += 1
+                            else:
+                                if i < 5:  # Log first few invalid samples for debugging
+                                    logger.warning(f"Sample {i} has non-numeric values: x={x_val} ({type(x_val)}), y={y_val} ({type(y_val)}), z={z_val} ({type(z_val)})")
+                        else:
+                            if i < 5:
+                                logger.warning(f"Sample {i} missing fields: timestamp={has_timestamp}, accel_format={has_accel_format}, xyz_format={has_xyz_format}")
+                                logger.warning(f"Sample {i} keys: {list(sample.keys())}")
+                    
+                    validity_percent = (valid_samples / len(motion_data)) * 100 if len(motion_data) > 0 else 0
+                    logger.info(f"Motion data validation: {valid_samples}/{len(motion_data)} valid samples ({validity_percent:.1f}%)")
+                    
+                    # Very lenient threshold - 30% valid samples is acceptable
+                    if valid_samples < max(30, len(motion_data) * 0.3):
+                        logger.error(f"Motion data quality insufficient: {valid_samples}/{len(motion_data)} ({validity_percent:.1f}%)")
+                        yield f"data: {json.dumps({'error': f'Motion data quality insufficient: only {valid_samples}/{len(motion_data)} valid samples ({validity_percent:.1f}%). Please ensure device sensors are working and you granted motion permissions.'})}\n\n"
+                        return
+                    
+                    logger.info(f"✓ Motion data validated successfully: {valid_samples} valid samples ({validity_percent:.1f}%)")
+                        
+                except json.JSONDecodeError:
+                    yield f"data: {json.dumps({'error': 'Invalid motion data format'})}\n\n"
+                    return
+
+            # Save audio file (if provided) and convert to WAV
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            audio_path = None
+            
+            if audio_file:
+                # Save as WebM first
+                webm_filename = f'audio_{timestamp}.webm'
+                webm_path = os.path.join(app.config['UPLOAD_FOLDER'], webm_filename)
+                audio_file.save(webm_path)
+                
+                # Convert to WAV for librosa compatibility
+                wav_filename = f'audio_{timestamp}.wav'
+                wav_path = os.path.join(app.config['UPLOAD_FOLDER'], wav_filename)
+                
+                conversion_success = convert_webm_to_wav(webm_path, wav_path)
+                
+                if conversion_success and os.path.exists(wav_path):
+                    audio_path = wav_path
+                    try:
+                        os.remove(webm_path)  # Clean up WebM file
+                    except:
+                        pass
+                    logger.info(f"Successfully converted WebM to WAV: {wav_filename}")
+                else:
+                    # If conversion fails, try to use WebM directly (may fail in feature extraction)
+                    logger.warning("WebM to WAV conversion failed, attempting to process WebM directly")
+                    audio_path = webm_path
+            
+            # Validation message based on test mode
+            if test_mode == 'voice':
+                validation_msg = '✅ Voice data validated successfully'
+            elif test_mode == 'tremor':
+                validation_msg = f'✅ Validation complete: {valid_samples} valid motion samples'
+            else:
+                validation_msg = f'✅ Voice and tremor data validated: {valid_samples} motion samples'
+            
+            yield f"data: {json.dumps({'status': 'validated', 'message': validation_msg})}\n\n"
+            time.sleep(0.1)
+            
+            # Start analysis - shorter delays to prevent timeouts
+            yield f"data: {json.dumps({'status': 'processing', 'message': '🔬 Starting ML Pipeline Analysis...', 'progress': 10})}\n\n"
+            time.sleep(0.3)
+            
+            # Voice feature extraction (if voice or both)
+            if test_mode in ['voice', 'both']:
+                yield f"data: {json.dumps({'status': 'processing', 'message': '🎤 Extracting voice features...', 'progress': 20})}\n\n"
+                time.sleep(0.2)
+                
+                yield f"data: {json.dumps({'status': 'processing', 'message': '📊 Analyzing audio characteristics...', 'progress': 35})}\n\n"
+                time.sleep(0.2)
+            
+            # Tremor feature extraction (if tremor or both)
+            if test_mode in ['tremor', 'both']:
+                yield f"data: {json.dumps({'status': 'processing', 'message': '🤚 Extracting tremor features...', 'progress': 50})}\n\n"
+                time.sleep(0.2)
+                
+                yield f"data: {json.dumps({'status': 'processing', 'message': '🔢 Computing frequency domain features...', 'progress': 65})}\n\n"
+                time.sleep(0.2)
+            
+            yield f"data: {json.dumps({'status': 'processing', 'message': '🧠 Running machine learning models...', 'progress': 80})}\n\n"
+            time.sleep(0.3)
+            
+            # Perform actual analysis based on test mode
+            # Send heartbeat before heavy computation
+            yield ": processing\n\n"
+            
+            if test_mode == 'voice':
+                # Voice-only analysis
+                results = ml_pipeline.analyze_voice_only(audio_path) if hasattr(ml_pipeline, 'analyze_voice_only') else ml_pipeline.analyze(audio_path, None)
+            elif test_mode == 'tremor':
+                # Tremor-only analysis
+                results = ml_pipeline.analyze_tremor_only(motion_data) if hasattr(ml_pipeline, 'analyze_tremor_only') else ml_pipeline.analyze(None, motion_data)
+            else:
+                # Combined analysis
+                results = ml_pipeline.analyze(audio_path, motion_data)
+            
+            # Send heartbeat after computation
+            yield ": computed\n\n"
+            
+            # Dataset matching - check if sample matches known dataset
+            yield f"data: {json.dumps({'status': 'processing', 'message': '🔍 Checking dataset matches...', 'progress': 85})}\n\n"
+            time.sleep(0.1)
+            
+            try:
+                voice_features_vector = results.get('voice_features_vector')
+                tremor_features_vector = results.get('tremor_features_vector')
+                
+                # Only perform matching if we have valid feature vectors
+                if voice_features_vector is not None or tremor_features_vector is not None:
+                    dataset_match = dataset_matcher.match_combined(
+                        voice_features=voice_features_vector,
+                        tremor_features=tremor_features_vector
+                    )
+                    results['dataset_match'] = dataset_match
+                    logger.info(f"Dataset matching results: {dataset_match}")
+                else:
+                    logger.warning("No feature vectors available for dataset matching")
+                    results['dataset_match'] = {'error': 'No features available for matching'}
+            except Exception as e:
+                import traceback
+                logger.warning(f"Dataset matching failed: {str(e)}")
+                logger.warning(f"Traceback: {traceback.format_exc()}")
+                results['dataset_match'] = {'error': 'Dataset matching unavailable'}
+            
+            yield f"data: {json.dumps({'status': 'processing', 'message': '💾 Storing results...', 'progress': 90})}\n\n"
+            time.sleep(0.2)
+            
+            # Store results - only if we actually have the data
+            voice_recording_id = None
+            tremor_recording_id = None
+            
+            # Only store voice recording if we have an actual audio file
+            if audio_path is not None and 'voice_confidence' in results:
+                try:
+                    voice_recording_id, _ = storage_manager.store_voice_recording(
+                        audio_file_path=audio_path,
+                        prediction=1 if results.get('prediction') == 'Affected' else 0,
+                        confidence=results.get('confidence', 0.0),
+                        voice_confidence=results.get('voice_confidence', 0.0),
+                        features=results.get('features', {})
+                    )
+                    results['voice_recording_id'] = voice_recording_id
+                    logger.info(f"Stored voice recording: {voice_recording_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to store voice recording: {e}")
+            
+            # Only store tremor data if we have actual motion data
+            if motion_data is not None and 'tremor_confidence' in results:
+                try:
+                    tremor_recording_id, _ = storage_manager.store_tremor_data(
+                        motion_data=motion_data,
+                        prediction=1 if results.get('prediction') == 'Affected' else 0,
+                        confidence=results.get('confidence', 0.0),
+                        tremor_confidence=results.get('tremor_confidence', 0.0),
+                        features=results.get('features', {})
+                    )
+                    results['tremor_recording_id'] = tremor_recording_id
+                    logger.info(f"Stored tremor recording: {tremor_recording_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to store tremor recording: {e}")
+            
+            if voice_recording_id and tremor_recording_id:
+                storage_manager.store_combined_analysis(
+                    voice_recording_id=voice_recording_id,
+                    tremor_recording_id=tremor_recording_id,
+                    combined_prediction=results.get('prediction'),
+                    combined_confidence=results.get('confidence', 0.0)
+                )
+            
+            yield f"data: {json.dumps({'status': 'processing', 'message': '✨ Finalizing...', 'progress': 95})}\n\n"
+            time.sleep(0.2)
+            
+            # Make results JSON serializable (convert numpy arrays to lists)
+            json_safe_results = make_json_serializable(results)
+            
+            # Send final results
+            yield f"data: {json.dumps({'status': 'complete', 'message': '✅ Analysis complete!', 'progress': 100, 'results': json_safe_results})}\n\n"
+            time.sleep(0.1)
+            
+            # Clean up audio file if it exists
+            try:
+                if audio_path and os.path.exists(audio_path):
+                    os.remove(audio_path)
+                    logger.info(f"Cleaned up audio file: {audio_path}")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup audio file: {cleanup_error}")
+                
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"Error in streaming analysis: {str(e)}")
+            logger.error(f"Traceback: {error_details}")
+            yield f"data: {json.dumps({'error': f'Analysis failed: {str(e)}', 'details': 'Check server logs for more information'})}\n\n"
+    
+    response = Response(stream_with_context(generate()), mimetype='text/event-stream', headers={
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Accel-Buffering': 'no',
+        'Connection': 'keep-alive'
+    })
+    response.timeout = None  # Disable timeout for streaming
+    return response
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_data():
@@ -256,11 +706,91 @@ def analyze_data():
         audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
         audio_file.save(audio_path)
 
-        logger.info(f"Processing audio file: {audio_filename}")
-        logger.info(f"Motion data samples: {len(motion_data)}")
+        # Enhanced logging with detailed progress
+        print("\n" + "="*70)
+        print("🔬 PARKINSON'S DETECTION - ANALYSIS STARTED")
+        print("="*70)
+        logger.info(f"📁 Processing audio file: {audio_filename}")
+        logger.info(f"📊 Motion data samples: {len(motion_data)}")
+        print(f"⏰ Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"📏 Audio size: {os.path.getsize(audio_path) / 1024:.2f} KB")
+        print(f"🎯 Valid motion samples: {valid_samples}/{len(motion_data)}")
+        print("-"*70)
 
         # Process data through ML pipeline
+        print("\n🔄 Starting ML Pipeline Analysis...")
         results = ml_pipeline.analyze(audio_path, motion_data)
+        
+        # Log detailed features (matching CSV structure)
+        print("\n" + "="*70)
+        print("📈 EXTRACTED FEATURES (CSV Format)")
+        print("="*70)
+        
+        features = results.get('features', {})
+        
+        # Log Magnitude features
+        if any(k.startswith('magnitude_') for k in features.keys()):
+            print("\n🌊 MAGNITUDE FEATURES:")
+            print(f"   ✓ Magnitude_mean:          {features.get('magnitude_mean', 0):.6f}")
+            print(f"   ✓ Magnitude_std_dev:       {features.get('magnitude_std_dev', 0):.6f}")
+            print(f"   ✓ Magnitude_rms:           {features.get('magnitude_rms', 0):.6f}")
+            print(f"   ✓ Magnitude_energy:        {features.get('magnitude_energy', 0):.6f}")
+            print(f"   ✓ Magnitude_peaks_rt:      {features.get('magnitude_peaks_rt', 0):.6f}")
+            print(f"   ✓ Magnitude_ssc_rt:        {features.get('magnitude_ssc_rt', 0):.6f}")
+            print(f"   ✓ Magnitude_fft_dom_freq:  {features.get('magnitude_fft_dom_freq', 0):.6f}")
+            print(f"   ✓ Magnitude_fft_tot_power: {features.get('magnitude_fft_tot_power', 0):.6f}")
+            print(f"   ✓ Magnitude_fft_energy:    {features.get('magnitude_fft_energy', 0):.6f}")
+            print(f"   ✓ Magnitude_fft_entropy:   {features.get('magnitude_fft_entropy', 0):.6f}")
+            print(f"   ✓ Magnitude_sampen:        {features.get('magnitude_sampen', 0):.6f}")
+            print(f"   ✓ Magnitude_dfa:           {features.get('magnitude_dfa', 0):.6f}")
+        
+        # Log PC1 features
+        if any(k.startswith('pc1_') for k in features.keys()):
+            print("\n🎯 PC1 FEATURES:")
+            print(f"   ✓ PC1_mean:          {features.get('pc1_mean', 0):.6f}")
+            print(f"   ✓ PC1_std_dev:       {features.get('pc1_std_dev', 0):.6f}")
+            print(f"   ✓ PC1_rms:           {features.get('pc1_rms', 0):.6f}")
+            print(f"   ✓ PC1_energy:        {features.get('pc1_energy', 0):.6f}")
+            print(f"   ✓ PC1_peaks_rt:      {features.get('pc1_peaks_rt', 0):.6f}")
+            print(f"   ✓ PC1_zero_cross_rt: {features.get('pc1_zero_cross_rt', 0):.6f}")
+            print(f"   ✓ PC1_ssc_rt:        {features.get('pc1_ssc_rt', 0):.6f}")
+            print(f"   ✓ PC1_fft_dom_freq:  {features.get('pc1_fft_dom_freq', 0):.6f}")
+            print(f"   ✓ PC1_fft_tot_power: {features.get('pc1_fft_tot_power', 0):.6f}")
+            print(f"   ✓ PC1_fft_energy:    {features.get('pc1_fft_energy', 0):.6f}")
+            print(f"   ✓ PC1_fft_entropy:   {features.get('pc1_fft_entropy', 0):.6f}")
+            print(f"   ✓ PC1_sampen:        {features.get('pc1_sampen', 0):.6f}")
+            print(f"   ✓ PC1_dfa:           {features.get('pc1_dfa', 0):.6f}")
+        
+        # Log tremor classifications
+        if any(k.endswith('_tremor') for k in features.keys()):
+            print("\n🤚 TREMOR CLASSIFICATIONS:")
+            print(f"   ✓ Rest_tremor:     {features.get('rest_tremor', 0)}")
+            print(f"   ✓ Postural_tremor: {features.get('postural_tremor', 0)}")
+            print(f"   ✓ Kinetic_tremor:  {features.get('kinetic_tremor', 0)}")
+        
+        # Log voice features
+        if any(k in ['pitch_mean', 'jitter', 'shimmer'] for k in features.keys()):
+            print("\n🎤 VOICE FEATURES:")
+            print(f"   ✓ Pitch Mean:         {features.get('pitch_mean', 0):.4f} Hz")
+            print(f"   ✓ Pitch Std Dev:      {features.get('pitch_std', 0):.4f} Hz")
+            print(f"   ✓ Jitter:             {features.get('jitter', 0):.6f} %")
+            print(f"   ✓ Shimmer:            {features.get('shimmer', 0):.6f} dB")
+            print(f"   ✓ HNR:                {features.get('hnr', 0):.4f} dB")
+            print(f"   ✓ Spectral Centroid:  {features.get('spectral_centroid', 0):.4f} Hz")
+            print(f"   ✓ Zero Crossing Rate: {features.get('zcr', 0):.6f}")
+            print(f"   ✓ Energy:             {features.get('energy', 0):.6f} dB")
+        
+        print("\n" + "="*70)
+        print("🎯 ANALYSIS RESULTS")
+        print("="*70)
+        print(f"   📊 Prediction:         {results.get('prediction', 'N/A')}")
+        print(f"   📈 Overall Confidence: {results.get('confidence', 0):.2f}%")
+        if 'voice_confidence' in results:
+            print(f"   🎤 Voice Patterns:     {results.get('voice_patterns', results.get('voice_confidence', 0)):.2f}%")
+        if 'tremor_confidence' in results:
+            print(f"   🤚 Motion Patterns:    {results.get('motion_patterns', results.get('tremor_confidence', 0)):.2f}%")
+        print(f"   ⏱️  Processing Time:    {results.get('metadata', {}).get('processing_time', 0):.2f}s")
+        print("="*70 + "\n")
 
         # Store results (voice and tremor recordings)
         voice_recording_id = None
@@ -310,8 +840,11 @@ def analyze_data():
         except OSError:
             logger.warning(f"Could not remove temporary file: {audio_path}")
 
+        # Make results JSON serializable (convert numpy arrays to lists)
+        json_safe_results = make_json_serializable(results)
+        
         # Return results with storage information
-        return jsonify(results)
+        return jsonify(json_safe_results)
 
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}")
@@ -389,19 +922,20 @@ if __name__ == '__main__':
     print("\n" + "="*70)
     print("  PARKINSON'S DETECTION - ML-POWERED ANALYSIS SYSTEM")
     print("="*70)
-    print("\n📊 System Status:")
-    print("  ✓ Resource-intensive ML models active")
-    print("  ✓ 150+ audio features | 200+ tremor features")
-    print("  ✓ Ensemble of 4 algorithms: SVM, RF, GBM, XGBoost")
-    print("  ✓ Processing time: 3-5 seconds (prioritizes accuracy)")
-    print("\n🌐 API Endpoints:")
-    print("  • GET  /api/health       - Health check")
-    print("  • POST /api/analyze      - Main ML analysis endpoint (real ML)")
-    print("  • GET  /api/models/info  - Model information")
-    print("\n🚀 Server starting on http://localhost:5000")
+    print("\nSystem Status:")
+    print("  * Resource-intensive ML models active")
+    print("  * 150+ audio features | 200+ tremor features")
+    print("  * Ensemble of 4 algorithms: SVM, RF, GBM, XGBoost")
+    print("  * Processing time: 3-5 seconds (prioritizes accuracy)")
+    print("\nAPI Endpoints:")
+    print("  * GET  /api/health       - Health check")
+    print("  * POST /api/analyze      - Main ML analysis endpoint (real ML)")
+    print("  * GET  /api/models/info  - Model information")
+    print("\nServer starting on http://localhost:5000")
     print("="*70 + "\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Disable reloader to prevent interruption during analysis
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
 
 # For Vercel deployment
 application = app

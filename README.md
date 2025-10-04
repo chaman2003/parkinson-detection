@@ -1,118 +1,220 @@
 # Parkinson's Detection System
 
-AI-powered system for early detection of Parkinson's disease using voice analysis and tremor data.
+AI-powered Parkinson's disease detection using voice analysis and tremor detection through multimodal machine learning.
 
-## 🚀 Quick Start
+## Quick Start
 
-**Run the application:**
+### Backend Setup
 
 ```bash
+# Navigate to backend
+cd backend
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Train models (first time only)
+python train.py
+
+# Run server
 python app.py
 ```
 
-The server will start at: http://localhost:5000
+Server will run on `http://localhost:5000`
 
-On first run, models will be trained automatically (takes 2-3 minutes).  
-Subsequent runs load models instantly!
+### Frontend Setup
 
-## 📋 Requirements
+Simply open `frontend/index.html` in a web browser or use a local server:
 
-- Python 3.13.5
-- Virtual environment (`.venv`)
-- Dependencies: `pip install -r backend/requirements.txt`
+```bash
+cd frontend
+python -m http.server 8000
+```
 
-## 📁 Project Structure
+Then navigate to `http://localhost:8000`
+
+## Project Structure
 
 ```
 parkinson/
-├── app.py                  # Main application (run this!) - At root level
 ├── backend/
-│   ├── core/               # Core ML modules (organized)
-│   │   ├── __init__.py     # Package initialization
-│   │   ├── ml_models.py    # ML ensemble models
-│   │   ├── audio_features.py   # Audio feature extraction
-│   │   ├── tremor_features.py  # Tremor feature extraction
-│   │   ├── data_loader.py      # Dataset utilities
-│   │   └── data_storage.py     # Storage manager
-│   ├── models/             # Trained models (auto-generated)
-│   ├── datasets/           # Training data
-│   └── requirements.txt    # Python dependencies
+│   ├── app.py                 # Main Flask server (run this)
+│   ├── train.py               # Model training (run once)
+│   ├── requirements.txt       # Python dependencies
+│   ├── README.md             # Backend documentation
+│   ├── utils/                # ML utilities
+│   │   ├── audio_features.py     # Voice feature extraction
+│   │   ├── tremor_features.py    # Motion feature extraction
+│   │   ├── ml_models.py          # ML pipeline
+│   │   ├── data_loader.py        # Dataset loading
+│   │   ├── data_storage.py       # Results storage
+│   │   └── dataset_matcher.py    # Dataset matching
+│   ├── datasets/             # Training data
+│   │   ├── tremor_simplified.csv      # 4,151 tremor samples
+│   │   ├── voice_labels.csv           # 40 voice files
+│   │   ├── frontend_params.json       # Parameter mapping
+│   │   └── voice_dataset/             # Voice audio files
+│   ├── models/               # Trained models (.pkl files)
+│   ├── uploads/              # Temporary file uploads
+│   └── recorded_data/        # Test recordings storage
+│
 ├── frontend/
-│   ├── index.html          # Web interface
-│   └── ...
-└── .venv/                  # Python environment
+│   ├── index.html            # Main entry point
+│   ├── js/                   # JavaScript modules
+│   │   ├── app.js                # Main application logic
+│   │   ├── excel-export.js       # Results export functionality
+│   │   └── sw.js                 # Service worker
+│   ├── css/                  # Stylesheets
+│   │   ├── styles.css            # Main styles
+│   │   └── quality-indicators.css # Quality indicator styles
+│   ├── assets/               # Icons and images
+│   ├── manifest.json         # PWA manifest
+│   ├── sensor-test.html      # Sensor debugging tool
+│   ├── sensor-test.js        # Sensor test logic
+│   └── proxy.py              # Proxy server for ngrok
+│
+└── README.md                 # This file
 ```
 
-## 🎯 Features
+## Features
 
-- **Voice Analysis**: 138 audio features extracted from voice recordings
-- **Tremor Detection**: 25 motion-based features from accelerometer data
-- **ML Ensemble**: SVM + Random Forest + Gradient Boosting
-- **Auto-Training**: Automatically trains models on first run
-- **REST API**: Easy integration with any frontend
+### Voice Analysis
+- Extracts 138 audio features (MFCC, Spectral, Prosodic, Voice Quality)
+- Analyzes speech patterns and vocal characteristics
+- Compares against known Parkinson's voice signatures
 
-## 🌐 API Endpoints
+### Tremor Detection
+- Extracts 25 motion features from device sensors
+- Analyzes acceleration and rotation patterns
+- Detects tremor frequency and amplitude
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| POST | `/api/analyze` | Analyze voice & tremor data |
-| GET | `/api/models/info` | Model information |
+### Combined Analysis
+- Ensemble ML models (SVM + RandomForest + GradientBoosting)
+- Weighted prediction combining voice and tremor analysis
+- Dataset matching for validation
 
-## 📊 Training Data
+## API Endpoints
 
-- **Voice Samples**: 81 recordings (41 healthy, 40 Parkinson's)
-- **Tremor Data**: 4,151 samples (2,051 healthy, 2,100 affected)
-- **Training Time**: ~3 minutes (CPU)
-- **Accuracy**: 65.5% (voice), 43.7% (tremor)
+### Backend API
 
-## 🔄 Retraining Models
+- `GET /api/health` - Health check
+- `POST /api/analyze` - Analyze voice and/or tremor data
+- `POST /api/analyze-stream` - Streaming analysis with progress
+- `GET /api/models/info` - Model information
+- `GET /api/storage/stats` - Storage statistics
 
-To retrain from scratch:
+## Data Flow
 
-1. Delete models: `Remove-Item -Recurse backend\models\*`
-2. Run app: `python backend\app.py`
+```
+Frontend → Backend → ML Pipeline → Results → Storage
+   ↓                      ↓
+WebM Audio          138 Voice Features
+Motion Data         25 Tremor Features
+```
 
-## 📖 Documentation
+### Frontend Input
+- **Voice**: WebM audio file (10 seconds recording)
+- **Tremor**: JSON array of motion samples
+  - `x`, `y`, `z` (acceleration in m/s²)
+  - `timestamp` (performance.now() in milliseconds)
 
-- `SETUP_GUIDE.md` - Detailed setup and cleanup information
-- `TRAINING_COMPLETE.md` - Training details and configuration
-- `backend/REAL_DATASET_GUIDE.md` - Dataset documentation
+### Backend Processing
+- **Voice**: WebM → WAV → 138 features
+- **Tremor**: Motion data → 25 features
+- **ML**: Ensemble models → Prediction + Confidence
 
-## 🛠️ Tech Stack
+## Models
 
-- **Backend**: Flask, Python 3.13
-- **ML**: scikit-learn 1.7.2
-- **Audio**: librosa 0.10.1
-- **Frontend**: Vanilla JS, HTML5, CSS3
+### Training Data
+- **Tremor**: 4,151 samples (2,051 healthy, 2,100 affected)
+- **Voice**: 40 Parkinson's-affected samples
 
-## ✅ Single File Operation
+### ML Architecture
+- Ensemble Voting Classifier
+  - Support Vector Machine (SVM)
+  - Random Forest (100 estimators)
+  - Gradient Boosting (100 estimators)
+- StandardScaler for feature normalization
 
-Everything runs from **one file**: `app.py` (at project root)
+### Performance
+- Tremor Model: ~64% accuracy
+- Combined Analysis: Weighted voice + tremor predictions
 
-- ✅ Automatic model detection
-- ✅ Auto-training if needed
-- ✅ Instant loading if trained
-- ✅ No manual steps required
-- ✅ All helper modules organized in `backend/core/`
+## Development
 
-## 📦 Clean Architecture
+### Retrain Models
 
-- **`app.py`** - Single entry point at root level
-- **`backend/core/`** - All interconnected Python modules (organized)
-- **`backend/models/`** - Trained ML models
-- **`backend/datasets/`** - Training data
-- **`frontend/`** - Web interface
-
-## 📝 License
-
-This is an educational/research project for Parkinson's disease detection.
-
-## 🎉 Getting Started
-
-Just run:
 ```bash
+cd backend
+python train.py
+```
+
+Training takes ~90 seconds and saves 6 model files to `models/`:
+- `tremor_model.pkl`, `tremor_scaler.pkl`
+- `voice_model.pkl`, `voice_scaler.pkl`
+- `voice_dataset_mapping.pkl`, `tremor_dataset_mapping.pkl`
+
+### Test Backend
+
+```bash
+cd backend
 python app.py
 ```
 
-That's it! The app handles everything else automatically. 🚀
+Visit `http://localhost:5000/api/health` to verify server is running.
+
+### Test Frontend
+
+Open `frontend/index.html` in browser or run:
+
+```bash
+cd frontend
+python -m http.server 8000
+```
+
+## Production Deployment
+
+### Backend
+- Compatible with Flask production servers (Gunicorn, uWSGI)
+- Vercel-ready (includes `application = app` export)
+
+### Frontend
+- Static files - can be hosted anywhere
+- Progressive Web App (PWA) ready
+- Works offline after first load
+
+## Requirements
+
+### Python (Backend)
+- Python 3.8+
+- Flask 2.3+
+- scikit-learn 1.3+
+- librosa 0.10+
+- pandas, numpy, scipy
+
+See `backend/requirements.txt` for complete list.
+
+### Browser (Frontend)
+- Modern browser with:
+  - MediaRecorder API support
+  - DeviceMotion API support
+  - HTTPS (for sensor access on mobile)
+
+## Testing Tools
+
+### Sensor Test Page
+`frontend/sensor-test.html` - Verify device sensors are working correctly
+
+### Proxy Server
+`frontend/proxy.py` - Forward requests when using ngrok tunnels
+
+## License
+
+Research and educational use only.
+
+## Support
+
+For issues or questions, please check the documentation in:
+- `backend/README.md` - Backend setup and API details
+- `backend/datasets/training_summary.json` - Training details
+- `backend/datasets/frontend_params.json` - Parameter mappings

@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#2196F3">
-    <title>Parkinson's Detection PWA</title>
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Icons -->
+    <meta name="theme-color" content="#667eea">
+    <title>Parkinson's Detection - AI Analysis</title>
     <link rel="icon" type="image/svg+xml" href="assets/icon-192.svg">
-    <link rel="apple-touch-icon" href="assets/icon-192.svg">
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/quality-indicators.css">
 </head>
 <body>
+    <svg width="0" height="0" style="position: absolute;">
+        <defs>
+            <linearGradient id="confidence-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+
     <div class="app-container">
         <!-- Header -->
         <header class="header">
@@ -59,6 +61,9 @@
                     </div>
                     <button id="start-test-btn" class="btn btn-primary btn-large">
                         Start Detection Test
+                    </button>
+                    <button id="sensor-test-btn" class="btn btn-secondary btn-large" style="margin-top: 1rem;" onclick="window.location.href='sensor-test.html'">
+                        🔬 Test Sensors & Microphone
                     </button>
                     <p class="disclaimer">
                         <strong>Disclaimer:</strong> This app is for research purposes only and should not be used as a substitute for professional medical diagnosis.
@@ -137,6 +142,61 @@
                             </button>
                             <div id="voice-visualizer" class="audio-visualizer"></div>
                         </div>
+                        
+                        <!-- Real-time Voice Metrics -->
+                        <div id="voice-metrics" class="metrics-container hidden">
+                            <h3>📊 Live Voice Metrics</h3>
+                            <div class="metrics-grid">
+                                <div class="metric-card">
+                                    <div class="metric-label">Audio Level</div>
+                                    <div class="metric-value" id="audio-level">0 dB</div>
+                                    <div class="metric-bar">
+                                        <div id="audio-level-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Pitch (F0)</div>
+                                    <div class="metric-value" id="pitch-value">0 Hz</div>
+                                    <div class="metric-bar">
+                                        <div id="pitch-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Spectral Centroid</div>
+                                    <div class="metric-value" id="spectral-centroid">0 Hz</div>
+                                    <div class="metric-bar">
+                                        <div id="spectral-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Signal Quality</div>
+                                    <div class="metric-value" id="signal-quality">0%</div>
+                                    <div class="metric-bar">
+                                        <div id="quality-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Signal-to-Noise Ratio</div>
+                                    <div class="metric-value" id="snr-value">0 dB</div>
+                                    <div class="metric-bar">
+                                        <div id="snr-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Zero Crossing Rate</div>
+                                    <div class="metric-value" id="zcr-value">0.0</div>
+                                    <div class="metric-bar">
+                                        <div id="zcr-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="voice-status" class="test-status"></div>
                     </div>
 
@@ -154,16 +214,114 @@
                             </button>
                             <div id="tremor-visualizer" class="motion-visualizer"></div>
                         </div>
+                        
+                        <!-- Real-time Tremor Metrics -->
+                        <div id="tremor-metrics" class="metrics-container hidden">
+                            <h3>📊 Live Motion Metrics</h3>
+                            <div class="metrics-grid">
+                                <div class="metric-card">
+                                    <div class="metric-label">Acceleration Magnitude</div>
+                                    <div class="metric-value" id="accel-magnitude">0.0 m/s²</div>
+                                    <div class="metric-bar">
+                                        <div id="accel-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Tremor Frequency</div>
+                                    <div class="metric-value" id="tremor-freq">0.0 Hz</div>
+                                    <div class="metric-bar">
+                                        <div id="tremor-freq-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">4-6 Hz Band Power</div>
+                                    <div class="metric-value" id="tremor-band-power">0.0</div>
+                                    <div class="metric-bar">
+                                        <div id="tremor-band-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Stability Index</div>
+                                    <div class="metric-value" id="stability-index">0.0</div>
+                                    <div class="metric-bar">
+                                        <div id="stability-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Jerk (Movement Smoothness)</div>
+                                    <div class="metric-value" id="jerk-value">0.0 m/s³</div>
+                                    <div class="metric-bar">
+                                        <div id="jerk-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-label">Sampling Rate</div>
+                                    <div class="metric-value" id="sampling-rate">0 Hz</div>
+                                    <div class="metric-bar">
+                                        <div id="sampling-bar" class="metric-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="axis-display">
+                                <h4>Acceleration by Axis</h4>
+                                <div class="axis-meters">
+                                    <div class="axis-meter">
+                                        <span class="axis-label">X:</span>
+                                        <div class="axis-bar">
+                                            <div id="axis-x-bar" class="axis-fill axis-x"></div>
+                                        </div>
+                                        <span id="axis-x-value" class="axis-value">0.0</span>
+                                    </div>
+                                    <div class="axis-meter">
+                                        <span class="axis-label">Y:</span>
+                                        <div class="axis-bar">
+                                            <div id="axis-y-bar" class="axis-fill axis-y"></div>
+                                        </div>
+                                        <span id="axis-y-value" class="axis-value">0.0</span>
+                                    </div>
+                                    <div class="axis-meter">
+                                        <span class="axis-label">Z:</span>
+                                        <div class="axis-bar">
+                                            <div id="axis-z-bar" class="axis-fill axis-z"></div>
+                                        </div>
+                                        <span id="axis-z-value" class="axis-value">0.0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="tremor-status" class="test-status"></div>
                     </div>
 
-                    <!-- Processing -->
-                    <div id="processing-section" class="test-section hidden">
-                        <div class="processing-animation">
-                            <div class="spinner"></div>
-                            <h3>Analyzing Data...</h3>
-                            <p>Our AI is processing your voice and tremor data</p>
+                </div>
+            </section>
+
+            <!-- Processing Screen (Real-time Backend Updates) -->
+            <section id="processing-screen" class="screen">
+                <div class="processing-content">
+                    <div class="processing-animation">
+                        <div class="spinner-large"></div>
+                    </div>
+                    <h2 class="processing-title">🔬 Analysis in Progress</h2>
+                    <p class="processing-subtitle">Real-time backend processing</p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar-large">
+                            <div class="progress-fill"></div>
                         </div>
+                        <p class="status-text">Initializing...</p>
+                        <p class="progress-percent">0%</p>
+                    </div>
+                    
+                    <div class="processing-info">
+                        <p>⚠️ Please wait while the backend performs real analysis</p>
+                        <p>All computation is being performed on the server</p>
                     </div>
                 </div>
             </section>
@@ -171,78 +329,205 @@
             <!-- Results Screen -->
             <section id="results-screen" class="screen">
                 <div class="results-content">
-                    <div class="result-card">
+                    <!-- Main Result Card -->
+                    <div class="result-main-card">
                         <div id="result-indicator" class="result-indicator">
-                            <div class="result-icon"></div>
+                            <div class="result-icon-circle">
+                                <div class="result-icon"></div>
+                            </div>
                             <h2 id="result-title" class="result-title"></h2>
                             <p id="result-subtitle" class="result-subtitle"></p>
+                            <div class="result-confidence-badge">
+                                <span id="main-confidence-badge"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confidence Scores Grid -->
+                    <div class="confidence-grid">
+                        <div class="confidence-card" id="overall-confidence-card">
+                            <div class="confidence-card-icon">🎯</div>
+                            <h3>Overall Score</h3>
+                            <div class="confidence-circle">
+                                <svg class="confidence-circle-svg" viewBox="0 0 100 100">
+                                    <circle class="confidence-circle-bg" cx="50" cy="50" r="45"/>
+                                    <circle id="overall-circle" class="confidence-circle-fill" cx="50" cy="50" r="45"/>
+                                </svg>
+                                <div class="confidence-circle-text">
+                                    <span id="overall-percentage" class="confidence-percentage-large"></span>
+                                </div>
+                            </div>
+                            <p class="confidence-label">Confidence Level</p>
                         </div>
 
-                        <div class="confidence-section">
-                            <h3>Analysis Details</h3>
-                            <div class="confidence-item">
-                                <label>Overall Confidence:</label>
-                                <div class="confidence-bar">
-                                    <div id="overall-confidence" class="confidence-fill"></div>
+                        <div class="confidence-card" id="voice-confidence-card" style="display: none;">
+                            <div class="confidence-card-icon">🎤</div>
+                            <h3>Voice Analysis</h3>
+                            <div class="confidence-circle">
+                                <svg class="confidence-circle-svg" viewBox="0 0 100 100">
+                                    <circle class="confidence-circle-bg" cx="50" cy="50" r="45"/>
+                                    <circle id="voice-circle" class="confidence-circle-fill" cx="50" cy="50" r="45"/>
+                                </svg>
+                                <div class="confidence-circle-text">
+                                    <span id="voice-percentage" class="confidence-percentage-large"></span>
                                 </div>
-                                <span id="overall-percentage" class="confidence-percentage"></span>
                             </div>
-                            <div class="confidence-item">
-                                <label>Voice Analysis:</label>
-                                <div class="confidence-bar">
-                                    <div id="voice-confidence" class="confidence-fill"></div>
-                                </div>
-                                <span id="voice-percentage" class="confidence-percentage"></span>
-                            </div>
-                            <div class="confidence-item">
-                                <label>Tremor Analysis:</label>
-                                <div class="confidence-bar">
-                                    <div id="tremor-confidence" class="confidence-fill"></div>
-                                </div>
-                                <span id="tremor-percentage" class="confidence-percentage"></span>
-                            </div>
+                            <p class="confidence-label">Audio Patterns</p>
                         </div>
 
-                        <div class="feature-breakdown">
-                            <h3>Detection Features</h3>
-                            <div id="feature-list" class="feature-breakdown-list">
-                                <!-- Features will be populated dynamically -->
+                        <div class="confidence-card" id="tremor-confidence-card" style="display: none;">
+                            <div class="confidence-card-icon">📱</div>
+                            <h3>Tremor Analysis</h3>
+                            <div class="confidence-circle">
+                                <svg class="confidence-circle-svg" viewBox="0 0 100 100">
+                                    <circle class="confidence-circle-bg" cx="50" cy="50" r="45"/>
+                                    <circle id="tremor-circle" class="confidence-circle-fill" cx="50" cy="50" r="45"/>
+                                </svg>
+                                <div class="confidence-circle-text">
+                                    <span id="tremor-percentage" class="confidence-percentage-large"></span>
+                                </div>
                             </div>
+                            <p class="confidence-label">Motion Patterns</p>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Features Section -->
+                    <div class="features-detailed">
+                        <h3 class="section-title">📊 Detailed Analysis</h3>
+                        
+                        <!-- Voice Features -->
+                        <div id="voice-features-section" class="feature-category" style="display: none;">
+                            <div class="feature-category-header">
+                                <h4>🎤 Voice Features</h4>
+                                <span class="feature-count" id="voice-feature-count"></span>
+                            </div>
+                            <div id="voice-features-grid" class="features-grid"></div>
                         </div>
 
-                        <div class="action-buttons">
-                            <button id="new-test-btn" class="btn btn-secondary">
-                                Take New Test
-                            </button>
-                            <button id="share-results-btn" class="btn btn-primary">
-                                Share Results
-                            </button>
+                        <!-- Tremor Features -->
+                        <div id="tremor-features-section" class="feature-category" style="display: none;">
+                            <div class="feature-category-header">
+                                <h4>📱 Motion Features</h4>
+                                <span class="feature-count" id="tremor-feature-count"></span>
+                            </div>
+                            <div id="tremor-features-grid" class="features-grid"></div>
                         </div>
+                    </div>
+
+                    <!-- ML Model Info -->
+                    <div class="ml-info-card">
+                        <div class="ml-info-header">
+                            <span class="ml-badge">🤖 AI-Powered</span>
+                            <h4>Analysis Methodology</h4>
+                        </div>
+                        <div class="ml-info-grid">
+                            <div class="ml-info-item">
+                                <div class="ml-info-icon">🧠</div>
+                                <div class="ml-info-content">
+                                    <h5>Ensemble Model</h5>
+                                    <p>4 ML algorithms (SVM, RF, GBM, XGBoost)</p>
+                                </div>
+                            </div>
+                            <div class="ml-info-item">
+                                <div class="ml-info-icon">📊</div>
+                                <div class="ml-info-content">
+                                    <h5>Feature Extraction</h5>
+                                    <p id="feature-count-text">350+ parameters analyzed</p>
+                                </div>
+                            </div>
+                            <div class="ml-info-item">
+                                <div class="ml-info-icon">⏱️</div>
+                                <div class="ml-info-content">
+                                    <h5>Processing Time</h5>
+                                    <p id="processing-time">3-5 seconds</p>
+                                </div>
+                            </div>
+                            <div class="ml-info-item">
+                                <div class="ml-info-icon">✨</div>
+                                <div class="ml-info-content">
+                                    <h5>Accuracy</h5>
+                                    <p>Research-grade analysis</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="results-actions">
+                        <button id="new-test-btn" class="btn btn-secondary btn-large">
+                            <span class="btn-icon">🔄</span>
+                            Take New Test
+                        </button>
+                        <button id="share-results-btn" class="btn btn-primary btn-large">
+                            <span class="btn-icon">📤</span>
+                            Share Results
+                        </button>
+                        <button id="download-results-btn" class="btn btn-outline btn-large">
+                            <span class="btn-icon">💾</span>
+                            Download Report
+                        </button>
+                    </div>
+
+                    <!-- Disclaimer -->
+                    <div class="results-disclaimer">
+                        <p><strong>⚕️ Medical Disclaimer:</strong> This is a research tool and not a medical diagnosis. Please consult healthcare professionals for proper evaluation.</p>
                     </div>
                 </div>
             </section>
         </main>
 
-        <!-- Footer -->
+        <!-- Download Options Modal -->
+        <div id="download-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📥 Download Options</h2>
+                    <button class="modal-close" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">Choose how you'd like to download your test results:</p>
+                    <div class="download-options">
+                        <button class="download-option" id="download-simple">
+                            <div class="option-icon">📄</div>
+                            <div class="option-content">
+                                <h3>Simple Report</h3>
+                                <p>Summary with key findings and confidence scores</p>
+                                <ul class="option-features">
+                                    <li>✓ Test results and prediction</li>
+                                    <li>✓ Confidence percentages</li>
+                                    <li>✓ Basic metadata</li>
+                                    <li>✓ Quick overview (1 page)</li>
+                                </ul>
+                            </div>
+                            <div class="option-badge">Excel</div>
+                        </button>
+                        <button class="download-option" id="download-detailed">
+                            <div class="option-icon">📊</div>
+                            <div class="option-content">
+                                <h3>Detailed Analysis</h3>
+                                <p>Complete dataset with all extracted features</p>
+                                <ul class="option-features">
+                                    <li>✓ 30+ tremor feature columns</li>
+                                    <li>✓ Voice analysis parameters</li>
+                                    <li>✓ Raw sensor data</li>
+                                    <li>✓ Research-ready format</li>
+                                </ul>
+                            </div>
+                            <div class="option-badge">Excel</div>
+                        </button>
+                    </div>
+                    <div class="modal-note">
+                        <strong>Note:</strong> Detailed analysis includes all features matching the research dataset format.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <footer class="footer">
-            <p>&copy; 2025 Parkinson's Detection PWA - Research Tool</p>
+            <p>&copy; 2025 Parkinson's Detection - Research Tool</p>
         </footer>
     </div>
 
-    <!-- Install PWA Banner -->
-    <div id="install-banner" class="install-banner hidden">
-        <div class="install-content">
-            <span class="install-icon">📱</span>
-            <div class="install-text">
-                <h4>Install App</h4>
-                <p>Add to home screen for easy access</p>
-            </div>
-            <button id="install-btn" class="btn btn-install">Install</button>
-            <button id="dismiss-install" class="btn-close">&times;</button>
-        </div>
-    </div>
-
-    <!-- JavaScript -->
-    <script src="app.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/excel-export.js"></script>
 </body>
 </html>

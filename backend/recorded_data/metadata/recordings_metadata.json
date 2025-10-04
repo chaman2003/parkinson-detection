@@ -1,5 +1,129 @@
 {
-  "voice_recordings": [],
-  "tremor_recordings": [],
-  "total_recordings": 0
+  "voice_recordings": [
+    {
+      "recording_id": "voice_20251003_122111_366238",
+      "timestamp": "2025-10-03T12:21:11.370680",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251003_122111_366238.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 0.5,
+      "voice_confidence": 0.5,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 0.473
+      }
+    }
+  ],
+  "tremor_recordings": [
+    {
+      "recording_id": "tremor_20251003_121724_334897",
+      "timestamp": "2025-10-03T12:17:24.355630",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 0.5509870741038424,
+      "tremor_confidence": 0.5509870741038424,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_224824_339816",
+      "timestamp": "2025-10-03T22:48:24.376956",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 0.621048536716088,
+      "tremor_confidence": 0.621048536716088,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_225509_841512",
+      "timestamp": "2025-10-03T22:55:09.861276",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 0.6307635446886746,
+      "tremor_confidence": 0.6307635446886746,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_230637_874473",
+      "timestamp": "2025-10-03T23:06:37.894407",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.52,
+      "tremor_confidence": 63.52,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_232502_492020",
+      "timestamp": "2025-10-03T23:25:02.506836",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.69,
+      "tremor_confidence": 63.69,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_232719_230846",
+      "timestamp": "2025-10-03T23:27:19.265906",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.34,
+      "tremor_confidence": 63.34,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_233128_889651",
+      "timestamp": "2025-10-03T23:31:28.907549",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.55,
+      "tremor_confidence": 63.55,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_233211_794554",
+      "timestamp": "2025-10-03T23:32:11.813202",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 58.19,
+      "tremor_confidence": 58.19,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251003_235042_142941",
+      "timestamp": "2025-10-03T23:50:42.164535",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 50.16,
+      "tremor_confidence": 50.16,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251004_000817_234001",
+      "timestamp": "2025-10-04T00:08:17.256281",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.53,
+      "tremor_confidence": 63.53,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251004_001617_782644",
+      "timestamp": "2025-10-04T00:16:17.804130",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 95.0,
+      "tremor_confidence": 95.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251004_002958_395321",
+      "timestamp": "2025-10-04T00:29:58.414057",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 95.0,
+      "tremor_confidence": 95.0,
+      "user_label": null
+    }
+  ],
+  "total_recordings": 13
 }
