@@ -1,0 +1,19 @@
+{
+  "name": "parkinson-detection-frontend",
+  "version": "1.0.0",
+  "description": "Parkinson Detection Frontend - Deployable to Vercel",
+  "scripts": {
+    "build": "node vercel-build.js"
+  },
+  "keywords": [
+    "parkinson",
+    "detection",
+    "ai",
+    "health",
+    "frontend"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}

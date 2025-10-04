@@ -123,7 +123,25 @@
       "confidence": 95.0,
       "tremor_confidence": 95.0,
       "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251004_193601_084071",
+      "timestamp": "2025-10-04T19:36:01.120634",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 84.11,
+      "tremor_confidence": 84.11,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251004_194049_453085",
+      "timestamp": "2025-10-04T19:40:49.470789",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 83.81,
+      "tremor_confidence": 83.81,
+      "user_label": null
     }
   ],
-  "total_recordings": 13
+  "total_recordings": 15
 }

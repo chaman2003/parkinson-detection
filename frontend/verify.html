@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Verification - Parkinson Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .test-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: #0066cc;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-details {
+            margin-top: 10px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .checklist {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .checklist li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checklist li::before {
+            content: '⏳';
+            font-size: 18px;
+        }
+
+        .checklist li.done::before {
+            content: '✅';
+        }
+
+        .checklist li.failed::before {
+            content: '❌';
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Deployment Verification</h1>
+        <p class="subtitle">Verify your frontend deployment configuration</p>
+
+        <!-- Environment Detection -->
+        <div class="test-section">
+            <h2>🌐 Environment Detection</h2>
+            <div id="env-status" class="status pending">⏳ Detecting environment...</div>
+            <div id="env-details" class="info-box" style="display: none;"></div>
+        </div>
+
+        <!-- Config System -->
+        <div class="test-section">
+            <h2>⚙️ Configuration System</h2>
+            <div id="config-status" class="status pending">⏳ Checking config...</div>
+            <div id="config-details" class="info-box" style="display: none;"></div>
+        </div>
+
+        <!-- Backend Connection -->
+        <div class="test-section">
+            <h2>🔌 Backend Connection</h2>
+            <button id="test-backend" onclick="testBackend()">Test Backend Connection</button>
+            <div id="backend-status" class="status pending" style="display: none;">⏳ Testing...</div>
+            <div id="backend-details" class="result-details" style="display: none;"></div>
+        </div>
+
+        <!-- Overall Status -->
+        <div class="test-section">
+            <h2>📋 Deployment Checklist</h2>
+            <ul class="checklist" id="checklist">
+                <li id="check-env">Environment detected</li>
+                <li id="check-config">Config system loaded</li>
+                <li id="check-backend-url">Backend URL configured</li>
+                <li id="check-backend-live">Backend is accessible</li>
+            </ul>
+        </div>
+
+        <div class="info-box" style="margin-top: 30px;">
+            <strong>📚 Need help?</strong><br>
+            • Local development: Run <code>.\run.ps1</code><br>
+            • Vercel deployment: See <code>QUICKSTART_VERCEL.md</code><br>
+            • Troubleshooting: See <code>VERCEL_DEPLOYMENT.md</code>
+        </div>
+    </div>
+
+    <!-- Load config before tests -->
+    <script src="js/vercel-env.js" onerror="console.log('No vercel-env.js - local mode')"></script>
+    <script src="js/config.js"></script>
+
+    <script>
+        // Run tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            detectEnvironment();
+            checkConfig();
+        });
+
+        function detectEnvironment() {
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+            
+            let envType = 'Unknown';
+            let isLocal = false;
+
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                envType = 'Local Development';
+                isLocal = true;
+            } else if (hostname.includes('vercel.app')) {
+                envType = 'Vercel Production';
+            } else if (hostname.includes('ngrok')) {
+                envType = 'Ngrok Tunnel (Local)';
+                isLocal = true;
+            } else {
+                envType = 'Production';
+            }
+
+            const statusEl = document.getElementById('env-status');
+            const detailsEl = document.getElementById('env-details');
+
+            statusEl.className = 'status success';
+            statusEl.innerHTML = '✅ Environment Detected';
+
+            detailsEl.style.display = 'block';
+            detailsEl.innerHTML = `
+                <strong>Environment Type:</strong> ${envType}<br>
+                <strong>Hostname:</strong> ${hostname}<br>
+                <strong>Protocol:</strong> ${protocol}<br>
+                <strong>Is Local:</strong> ${isLocal ? 'Yes' : 'No'}
+            `;
+
+            document.getElementById('check-env').classList.add('done');
+        }
+
+        function checkConfig() {
+            const statusEl = document.getElementById('config-status');
+            const detailsEl = document.getElementById('config-details');
+
+            if (typeof window.AppConfig === 'undefined') {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = '❌ Config System Not Loaded';
+                detailsEl.style.display = 'block';
+                detailsEl.innerHTML = '<strong>Error:</strong> config.js is not loaded. Check that js/config.js exists.';
+                document.getElementById('check-config').classList.add('failed');
+                return;
+            }
+
+            const backendUrl = window.AppConfig.getBackendUrl();
+
+            statusEl.className = 'status success';
+            statusEl.innerHTML = '✅ Config System Loaded';
+
+            detailsEl.style.display = 'block';
+            detailsEl.innerHTML = `
+                <strong>Config Loaded:</strong> Yes<br>
+                <strong>Backend URL:</strong> ${backendUrl}<br>
+                <strong>Backend URL Source:</strong> ${window.BACKEND_URL ? 'Vercel Environment Variable' : 'Auto-detected (Local Proxy)'}
+            `;
+
+            document.getElementById('check-config').classList.add('done');
+
+            if (backendUrl) {
+                document.getElementById('check-backend-url').classList.add('done');
+            } else {
+                document.getElementById('check-backend-url').classList.add('failed');
+            }
+        }
+
+        async function testBackend() {
+            const button = document.getElementById('test-backend');
+            const statusEl = document.getElementById('backend-status');
+            const detailsEl = document.getElementById('backend-details');
+
+            button.disabled = true;
+            statusEl.style.display = 'block';
+            statusEl.className = 'status pending';
+            statusEl.innerHTML = '⏳ Testing backend connection...';
+            detailsEl.style.display = 'none';
+
+            try {
+                const backendUrl = window.AppConfig.getBackendUrl();
+                const response = await fetch(`${backendUrl}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    statusEl.className = 'status success';
+                    statusEl.innerHTML = '✅ Backend Connected';
+                    
+                    detailsEl.style.display = 'block';
+                    detailsEl.innerHTML = `
+<strong>Response Status:</strong> ${response.status} ${response.statusText}
+<strong>Backend Data:</strong>
+${JSON.stringify(data, null, 2)}
+                    `.trim();
+
+                    document.getElementById('check-backend-live').classList.add('done');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = '❌ Backend Connection Failed';
+                
+                detailsEl.style.display = 'block';
+                detailsEl.innerHTML = `
+<strong>Error:</strong> ${error.message}
+
+<strong>Troubleshooting:</strong>
+1. Ensure backend is running (run.ps1)
+2. Check that ngrok tunnel is active
+3. Verify BACKEND_URL environment variable in Vercel
+4. Check browser console for CORS errors
+                `.trim();
+
+                document.getElementById('check-backend-live').classList.add('failed');
+            } finally {
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

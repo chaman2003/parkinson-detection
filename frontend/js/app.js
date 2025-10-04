@@ -15,8 +15,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             this.testProgress = 0;
         this.selectedTestMode = 'both'; // 'voice', 'tremor', or 'both'
         
-        // API Configuration - Environment aware
-        this.API_BASE_URL = this.getApiBaseUrl();
+        // API Configuration - Use AppConfig for environment-aware backend URL
+        this.API_BASE_URL = window.AppConfig ? window.AppConfig.getBackendUrl() : '/api';
         
         this.init();
     }
@@ -163,19 +163,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         document.getElementById('progress-text').textContent = text;
     }
 
-    // API Configuration Method
-    getApiBaseUrl() {
-        // Check if we're running on localhost or production
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-        
-        // 🔧 Frontend Proxy Configuration
-        // Frontend server proxies /api/* requests to localhost:5000
-        // Use relative URLs - proxy handles the backend routing
-        
-        // For all environments - use relative API URLs (proxied by frontend server)
-        return '/api';
-    }
+
 
     // Backend Availability Check - REQUIRED (no fallback)
     async checkBackendAvailability() {

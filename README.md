@@ -214,7 +214,7 @@ graph TD
 
 ---
 
-## 📦 Installation
+## 📦 Installation & Deployment
 
 ### 🔧 Prerequisites
 
@@ -223,15 +223,33 @@ graph TD
 - **Modern Web Browser** (Chrome 88+, Firefox 85+, Safari 14+)
 - **HTTPS Support** (required for sensor access)
 
-### 🚀 Quick Start
+### 🚀 Quick Start - Local Development
 
-#### 1. Clone Repository
+#### Windows (Easiest Method - One Command!)
+```powershell
+# Run this PowerShell script - it starts everything!
+.\run.ps1
+```
+
+This will automatically:
+1. ✅ Start the Flask backend (port 5000)
+2. ✅ Start the frontend proxy server (port 8000)
+3. ✅ Launch ngrok tunnel for mobile access
+4. ✅ Display all access URLs
+
+Then visit:
+- **Local**: http://localhost:8000
+- **Mobile**: Use the ngrok URL shown in the terminal
+
+#### Manual Setup (All Platforms)
+
+**1. Clone Repository**
 ```bash
 git clone https://github.com/chaman2003/parkinson-detection.git
 cd parkinson-detection
 ```
 
-#### 2. Backend Setup
+**2. Backend Setup**
 ```bash
 # Navigate to backend directory
 cd backend
@@ -247,24 +265,51 @@ pip install -r requirements.txt
 python app.py
 ```
 
-#### 3. Frontend Setup
+**3. Frontend Setup**
 ```bash
 # Navigate to frontend directory
 cd ../frontend
 
-# Install dependencies (if using build tools)
-npm install
-
-# Start development server
-npm start
-# OR serve static files
-python -m http.server 8000
+# Start the proxy server
+python server.py 8000
 ```
 
-#### 4. Access Application
+**4. Access Application**
 - **Frontend**: http://localhost:8000
 - **Backend API**: http://localhost:5000
 - **Full App**: Access via HTTPS for sensor functionality
+
+---
+
+### ☁️ Vercel Deployment (Production)
+
+Deploy the frontend to Vercel while keeping the backend running locally:
+
+#### Quick Deploy (5 minutes)
+
+1. **Start your local backend:**
+   ```powershell
+   .\run.ps1
+   ```
+
+2. **Deploy to Vercel:**
+   - Go to https://vercel.com/new
+   - Import your repository
+   - Set **Root Directory**: `frontend`
+   - Add environment variable:
+     - Name: `BACKEND_URL`
+     - Value: `https://freezingly-nonsignificative-edison.ngrok-free.dev`
+   - Click **Deploy**
+
+3. **Access your app:**
+   - Your Vercel URL: `https://your-project.vercel.app`
+   - Works globally with your local backend via ngrok!
+
+**📚 Full Deployment Guide**: See [frontend/QUICKSTART_VERCEL.md](frontend/QUICKSTART_VERCEL.md)
+
+**🔧 Detailed Instructions**: See [frontend/VERCEL_DEPLOYMENT.md](frontend/VERCEL_DEPLOYMENT.md)
+
+---
 
 ### 🐳 Docker Deployment (Optional)
 
