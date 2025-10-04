@@ -169,6 +169,20 @@
         "Voice Stability": 0.0,
         "Voice Quality": 61.2
       }
+    },
+    {
+      "recording_id": "voice_20251004_222100_027082",
+      "timestamp": "2025-10-04T22:21:00.028573",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251004_222100_027082.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 83.0,
+      "voice_confidence": 83.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 62.5
+      }
     }
   ],
   "tremor_recordings": [
@@ -353,7 +367,7 @@
       "user_label": null
     }
   ],
-  "total_recordings": 33,
+  "total_recordings": 34,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",

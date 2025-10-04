@@ -1249,10 +1249,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
             // Detailed voice features with all measured parameters
             const voiceFeatures = [
-                // Row 1 - Pattern Recognition
-                { name: 'Voice\nStability', icon: '🎵', value: results.features?.['Voice Stability'] || 0, unit: '%' },
+                // Row 1 - Pattern Recognition & Quality
                 { name: 'Voice\nQuality', icon: '📊', value: results.features?.['Voice Quality'] || 0, unit: '%' },
-                { name: 'Vocal\nTremor', icon: '〰️', value: results.features?.['Vocal Tremor'] || 0, unit: '%' },
                 
                 // Row 2 - Pitch Analysis
                 { name: 'Pitch\nMean', icon: '🎼', value: rawAudioFeatures.pitch_mean || 0, unit: 'Hz' },
@@ -1264,9 +1262,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 { name: 'Spectral\nCentroid', icon: '🌈', value: rawAudioFeatures.spectral_centroid_mean || 0, unit: 'Hz' },
                 { name: 'Spectral\nRolloff', icon: '📉', value: rawAudioFeatures.spectral_rolloff_mean || 0, unit: 'Hz' },
                 
-                // Row 4 - Timing and Energy
+                // Row 4 - Bandwidth and Rate
                 { name: 'Speech\nRate', icon: '⚡', value: rawAudioFeatures.speech_rate || 0, unit: 'rate' },
-                { name: 'Voiced\nFraction', icon: '🎤', value: rawAudioFeatures.voiced_fraction || 0, unit: 'ratio' },
                 { name: 'Spectral\nBandwidth', icon: '📡', value: rawAudioFeatures.spectral_bandwidth_mean || 0, unit: 'Hz' }
             ];
             
