@@ -1526,32 +1526,36 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Use raw audio features instead of simplified features
         const audioFeatures = results.audio_features || results.raw_features || {};
         const features = results.features || {};
+        const metadata = results.metadata || {};
         
         return {
-            // Raw measurements
+            // Audio metadata (FIXED: now includes duration and sample_rate)
+            duration: metadata.audio_duration || audioFeatures.duration || 0,
+            sample_rate: audioFeatures.sample_rate || metadata.sample_rate || 22050,
+            
+            // Pitch features
             pitch_mean: audioFeatures.pitch_mean || 0,
             pitch_std: audioFeatures.pitch_std || 0,
-            pitch_confidence: features['Voice Stability'] || 0,
-            jitter: (audioFeatures.pitch_jitter || 0) * 100,  // Convert to percentage
-            jitter_confidence: features['Voice Stability'] || 0,
-            shimmer: (audioFeatures.amplitude_shimmer || 0) * 100,  // Convert to percentage
-            shimmer_confidence: features['Voice Quality'] || 0,
-            hnr: audioFeatures.hnr || 0,
-            hnr_confidence: features['Voice Quality'] || 0,
-            spectral_centroid: audioFeatures.spectral_centroid_mean || 0,
-            spectral_confidence: features['Voice Quality'] || 0,
-            zcr: audioFeatures.zero_crossing_rate_mean || 0,
-            zcr_confidence: features['Voice Stability'] || 0,
-            energy: audioFeatures.energy_mean || 0,
-            energy_confidence: features['Voice Quality'] || 0,
-            mfcc_mean: audioFeatures.mfcc_mean || 0,
-            mfcc_confidence: features['Voice Quality'] || 0,
-            spectral_rolloff: audioFeatures.spectral_rolloff_mean || 0,
-            rolloff_confidence: features['Voice Quality'] || 0,
-            spectral_flux: audioFeatures.spectral_flux_mean || 0,
-            flux_confidence: features['Voice Quality'] || 0,
-            rms_energy: audioFeatures.rms_energy_mean || 0,
-            rms_confidence: features['Voice Quality'] || 0
+            
+            // Voice quality metrics
+            jitter_local: audioFeatures.jitter_local || audioFeatures.pitch_jitter || 0,
+            shimmer_local: audioFeatures.shimmer_local || audioFeatures.amplitude_shimmer || 0,
+            hnr_mean: audioFeatures.hnr_mean || audioFeatures.hnr || 0,
+            
+            // Spectral features
+            spectral_centroid: audioFeatures.spectral_centroid_mean || audioFeatures.spectral_centroid || 0,
+            spectral_rolloff: audioFeatures.spectral_rolloff_mean || audioFeatures.spectral_rolloff || 0,
+            spectral_flux: audioFeatures.spectral_flux_mean || audioFeatures.spectral_flux || 0,
+            
+            // Time-domain features
+            zcr_mean: audioFeatures.zero_crossing_rate_mean || audioFeatures.zcr || 0,
+            energy_mean: audioFeatures.energy_mean || audioFeatures.energy || 0,
+            rms_energy: audioFeatures.rms_energy_mean || audioFeatures.rms_energy || 0,
+            
+            // MFCC features
+            mfcc_mean_1: audioFeatures.mfcc_mean_1 || audioFeatures.mfcc_1 || 0,
+            mfcc_mean_2: audioFeatures.mfcc_mean_2 || audioFeatures.mfcc_2 || 0,
+            mfcc_mean_3: audioFeatures.mfcc_mean_3 || audioFeatures.mfcc_3 || 0
         };
     }
 

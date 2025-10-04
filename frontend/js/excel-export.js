@@ -145,10 +145,7 @@ class ExcelExporter {
             this.addTremorFeaturesSheet(wb, rawData.tremorData, results);
         }
 
-        // Raw Motion Data Sheet - Only include for tremor or both modes, NOT for voice-only
-        if ((testMode === 'tremor' || testMode === 'both') && rawData.motionSamples) {
-            this.addRawMotionDataSheet(wb, rawData.motionSamples);
-        }
+        // Raw Motion Data Sheet REMOVED - not needed in export
 
         XLSX.writeFile(wb, `Parkinson_Detailed_${this.getFilenameTimestamp()}.xlsx`);
         console.log('✅ Detailed data exported');
@@ -209,227 +206,124 @@ class ExcelExporter {
     }
 
     /**
-     * Add voice features sheet (filtered to remove specified fields)
+     * Add voice features sheet (row-wise with linked results)
      */
     addVoiceFeaturesSheet(wb, voiceData, results) {
-        const headers = [
-            'Feature Name',
-            'Value',
-            'Unit',
-            'Confidence',
-            'Description'
+        // ROW-WISE FORMAT: Each category becomes a row with value
+        const data = [
+            ['Parkinson\'s Voice Analysis - Detailed Results'],
+            [''],
+            ['ANALYSIS RESULTS'],
+            ['Prediction', results.prediction || 'N/A'],
+            ['Voice Confidence', `${(results.voice_confidence || 0).toFixed(2)}%`],
+            ['Voice Patterns', `${(results.voice_patterns || results.voice_confidence || 0).toFixed(2)}%`],
+            [''],
+            ['AUDIO METADATA'],
+            ['Audio Duration', `${(voiceData.duration || results.metadata?.audio_duration || 0).toFixed(2)} seconds`],
+            ['Sample Rate', `${voiceData.sample_rate || 'N/A'} Hz`],
+            ['Test ID', this.generateTestId()],
+            ['Timestamp', new Date().toISOString()],
+            [''],
+            ['VOICE FEATURES'],
+            ['Pitch Mean', `${(voiceData.pitch_mean || 0).toFixed(2)} Hz`],
+            ['Pitch Std Dev', `${(voiceData.pitch_std || 0).toFixed(2)} Hz`],
+            ['Jitter Local', `${(voiceData.jitter_local || 0).toFixed(4)}`],
+            ['Shimmer Local', `${(voiceData.shimmer_local || 0).toFixed(4)}`],
+            ['HNR Mean', `${(voiceData.hnr_mean || 0).toFixed(2)} dB`],
+            ['Spectral Centroid', `${(voiceData.spectral_centroid || 0).toFixed(2)} Hz`],
+            ['Spectral Rolloff', `${(voiceData.spectral_rolloff || 0).toFixed(2)} Hz`],
+            ['Spectral Flux', `${(voiceData.spectral_flux || 0).toFixed(4)}`],
+            ['Zero Crossing Rate', `${(voiceData.zcr_mean || 0).toFixed(4)}`],
+            ['MFCC Mean 1', `${(voiceData.mfcc_mean_1 || 0).toFixed(4)}`],
+            ['MFCC Mean 2', `${(voiceData.mfcc_mean_2 || 0).toFixed(4)}`],
+            ['MFCC Mean 3', `${(voiceData.mfcc_mean_3 || 0).toFixed(4)}`],
+            [''],
+            ['DISCLAIMER'],
+            ['This is a research tool and not a medical diagnosis.'],
+            ['Please consult healthcare professionals for proper evaluation.']
         ];
 
-        // Only include: Pitch Mean, Pitch Std Dev, HNR, Spectral Centroid, Spectral Rolloff
-        const features = [
-            ['Pitch Mean', voiceData.pitch_mean, 'Hz', voiceData.pitch_confidence, 'Average fundamental frequency'],
-            ['Pitch Std Dev', voiceData.pitch_std, 'Hz', voiceData.pitch_confidence, 'Pitch variation'],
-            ['HNR', voiceData.hnr, 'dB', voiceData.hnr_confidence, 'Harmonic-to-Noise Ratio'],
-            ['Spectral Centroid', voiceData.spectral_centroid, 'Hz', voiceData.spectral_confidence, 'Frequency center of mass'],
-            ['Spectral Rolloff', voiceData.spectral_rolloff, 'Hz', voiceData.rolloff_confidence, 'Frequency below 85% energy']
-        ];
-
-        const data = [headers, ...features];
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [
-            { wch: 25 },
-            { wch: 15 },
-            { wch: 10 },
-            { wch: 12 },
-            { wch: 40 }
+            { wch: 30 },  // Category/Feature name column
+            { wch: 40 }   // Value column
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, 'Voice Features');
     }
 
     /**
-     * Add tremor features sheet (comprehensive with all features shown in UI)
+     * Add tremor features sheet (row-wise format, no tremor type columns)
      */
     addTremorFeaturesSheet(wb, tremorData, results) {
-        // Create human-readable feature list matching UI display
-        const readableHeaders = [
-            'Feature Name',
-            'Value',
-            'Unit',
-            'Category',
-            'Description'
-        ];
-        
-        const readableFeatures = [
-            // Pattern Features (0-100 scale)
-            ['Tremor Frequency Score', results.features?.['Tremor Frequency'] || 0, '%', 'Pattern', 'Overall tremor frequency pattern strength'],
-            ['Postural Stability Score', results.features?.['Postural Stability'] || 0, '%', 'Pattern', 'Postural stability assessment'],
-            ['Motion Variability Score', results.features?.['Motion Variability'] || 0, '%', 'Pattern', 'Motion variation pattern'],
-            
-            // Raw Acceleration Features
-            ['Acceleration Magnitude', tremorData.magnitude_mean || 0, 'm/s²', 'Acceleration', 'Mean acceleration magnitude'],
-            ['Magnitude Std Dev', tremorData.magnitude_std_dev || 0, 'm/s²', 'Acceleration', 'Standard deviation of magnitude'],
-            ['Magnitude RMS', tremorData.magnitude_rms || 0, 'm/s²', 'Acceleration', 'Root mean square of magnitude'],
-            ['Magnitude Energy', tremorData.magnitude_energy || 0, 'energy', 'Acceleration', 'Total energy in magnitude signal'],
-            
-            // Frequency Analysis
-            ['Tremor Frequency', tremorData.magnitude_fft_dom_freq || 0, 'Hz', 'Frequency', 'Dominant frequency in motion'],
-            ['Tremor Band Power (4-6Hz)', tremorData.tremor_band_power_mag || 0, 'power', 'Frequency', 'Power in Parkinson\'s tremor band'],
-            ['Total FFT Power', tremorData.magnitude_fft_tot_power || 0, 'power', 'Frequency', 'Total frequency domain power'],
-            ['FFT Energy', tremorData.magnitude_fft_energy || 0, 'energy', 'Frequency', 'Energy in frequency domain'],
-            ['FFT Entropy', tremorData.magnitude_fft_entropy || 0, 'entropy', 'Frequency', 'Frequency domain entropy'],
-            
-            // Stability Metrics
-            ['Stability Index', tremorData.stability_index || 0, 'index', 'Stability', 'Overall stability measurement'],
-            ['Peak Rate', tremorData.magnitude_peaks_rt || 0, 'rate', 'Stability', 'Rate of signal peaks'],
-            ['Sample Entropy', tremorData.magnitude_sampen || 0, 'entropy', 'Stability', 'Signal regularity measure'],
-            ['DFA', tremorData.magnitude_dfa || 0, 'coefficient', 'Stability', 'Detrended fluctuation analysis'],
-            
-            // Tremor Classifications
-            ['Rest Tremor', tremorData.rest_tremor || 0, 'binary', 'Classification', 'Rest tremor detection'],
-            ['Postural Tremor', tremorData.postural_tremor || 0, 'binary', 'Classification', 'Postural tremor detection'],
-            ['Kinetic Tremor', tremorData.kinetic_tremor || 0, 'binary', 'Classification', 'Kinetic tremor detection']
-        ];
-        
-        const readableData = [readableHeaders, ...readableFeatures];
-        const ws1 = XLSX.utils.aoa_to_sheet(readableData);
-        ws1['!cols'] = [
-            { wch: 30 },
-            { wch: 15 },
-            { wch: 10 },
-            { wch: 15 },
-            { wch: 50 }
-        ];
-        XLSX.utils.book_append_sheet(wb, ws1, 'Tremor Features Detail');
-        
-        // CSV-format sheet - All features matching actual extracted data
-        const headers = [
-            'subject_id',
-            'start_timestamp',
-            'end_timestamp',
-            // Magnitude statistics (12)
-            'magnitude_mean',
-            'magnitude_std_dev',
-            'magnitude_rms',
-            'magnitude_energy',
-            'magnitude_max',
-            'magnitude_min',
-            'magnitude_range',
-            'magnitude_kurtosis',
-            'magnitude_skewness',
-            'magnitude_cv',
-            'magnitude_peaks_rt',
-            'magnitude_ssc_rt',
-            // Frequency features (8)
-            'magnitude_fft_dom_freq',
-            'magnitude_fft_tot_power',
-            'magnitude_fft_energy',
-            'magnitude_fft_entropy',
-            'tremor_band_power_mag',
-            'tremor_peak_freq',
-            'dominant_freq_x',
-            'tremor_band_power_x',
-            // Time features (6)
-            'zero_crossing_rate_mag',
-            'peak_count_mag',
-            'jerk_mean',
-            'jerk_std',
-            'stability_index',
-            'magnitude_sampen',
-            // Classification (3)
-            'rest_tremor',
-            'postural_tremor',
-            'kinetic_tremor',
-            // Results (3)
-            'Prediction',
-            'Tremor_Confidence',
-            'Motion_Patterns'
+        // ROW-WISE FORMAT: Each category becomes a row with value
+        const data = [
+            ['Parkinson\'s Tremor Analysis - Detailed Results'],
+            [''],
+            ['ANALYSIS RESULTS'],
+            ['Prediction', results.prediction || 'N/A'],
+            ['Tremor Confidence', `${(results.tremor_confidence || 0).toFixed(2)}%`],
+            ['Motion Patterns', `${(results.motion_patterns || results.tremor_confidence || 0).toFixed(2)}%`],
+            [''],
+            ['TEST METADATA'],
+            ['Test ID', this.generateTestId()],
+            ['Start Timestamp', tremorData.start_timestamp || new Date().toISOString()],
+            ['End Timestamp', tremorData.end_timestamp || new Date().toISOString()],
+            ['Motion Samples Count', results.metadata?.motion_samples || 0],
+            ['Sample Rate', `${results.metadata?.sampling_rate || 100} Hz`],
+            [''],
+            ['PATTERN FEATURES (0-100 scale)'],
+            ['Tremor Frequency Score', `${(results.features?.['Tremor Frequency'] || 0).toFixed(2)}%`],
+            ['Postural Stability Score', `${(results.features?.['Postural Stability'] || 0).toFixed(2)}%`],
+            ['Motion Variability Score', `${(results.features?.['Motion Variability'] || 0).toFixed(2)}%`],
+            [''],
+            ['ACCELERATION FEATURES'],
+            ['Magnitude Mean', `${(tremorData.magnitude_mean || 0).toFixed(4)} m/s²`],
+            ['Magnitude Std Dev', `${(tremorData.magnitude_std_dev || 0).toFixed(4)} m/s²`],
+            ['Magnitude RMS', `${(tremorData.magnitude_rms || 0).toFixed(4)} m/s²`],
+            ['Magnitude Energy', `${(tremorData.magnitude_energy || 0).toFixed(4)}`],
+            ['Magnitude Max', `${(tremorData.magnitude_max || 0).toFixed(4)} m/s²`],
+            ['Magnitude Min', `${(tremorData.magnitude_min || 0).toFixed(4)} m/s²`],
+            ['Magnitude Range', `${(tremorData.magnitude_range || 0).toFixed(4)} m/s²`],
+            ['Magnitude Kurtosis', `${(tremorData.magnitude_kurtosis || 0).toFixed(4)}`],
+            ['Magnitude Skewness', `${(tremorData.magnitude_skewness || 0).toFixed(4)}`],
+            ['Coefficient of Variation', `${(tremorData.magnitude_cv || 0).toFixed(4)}`],
+            ['Peak Rate', `${(tremorData.magnitude_peaks_rt || 0).toFixed(4)}`],
+            ['Slope Sign Changes Rate', `${(tremorData.magnitude_ssc_rt || 0).toFixed(4)}`],
+            [''],
+            ['FREQUENCY FEATURES'],
+            ['Dominant Frequency', `${(tremorData.magnitude_fft_dom_freq || 0).toFixed(4)} Hz`],
+            ['Total FFT Power', `${(tremorData.magnitude_fft_tot_power || 0).toFixed(4)}`],
+            ['FFT Energy', `${(tremorData.magnitude_fft_energy || 0).toFixed(4)}`],
+            ['FFT Entropy', `${(tremorData.magnitude_fft_entropy || 0).toFixed(4)}`],
+            ['Tremor Band Power (4-6Hz)', `${(tremorData.tremor_band_power_mag || 0).toFixed(4)}`],
+            ['Tremor Peak Frequency', `${(tremorData.tremor_peak_freq || 0).toFixed(4)} Hz`],
+            ['Dominant Frequency X-axis', `${(tremorData.dominant_freq_x || 0).toFixed(4)} Hz`],
+            ['Tremor Band Power X-axis', `${(tremorData.tremor_band_power_x || 0).toFixed(4)}`],
+            [''],
+            ['TIME DOMAIN FEATURES'],
+            ['Zero Crossing Rate', `${(tremorData.zero_crossing_rate_mag || 0).toFixed(4)}`],
+            ['Peak Count', `${(tremorData.peak_count_mag || 0).toFixed(0)}`],
+            ['Jerk Mean', `${(tremorData.jerk_mean || 0).toFixed(4)} m/s³`],
+            ['Jerk Std Dev', `${(tremorData.jerk_std || 0).toFixed(4)} m/s³`],
+            [''],
+            ['STABILITY METRICS'],
+            ['Stability Index', `${(tremorData.stability_index || 0).toFixed(4)}`],
+            ['Sample Entropy', `${(tremorData.magnitude_sampen || 0).toFixed(4)}`],
+            ['DFA Alpha', `${(tremorData.magnitude_dfa || 0).toFixed(4)}`],
+            [''],
+            ['DISCLAIMER'],
+            ['This is a research tool and not a medical diagnosis.'],
+            ['Please consult healthcare professionals for proper evaluation.']
         ];
 
-        const row = [
-            this.generateTestId(),
-            tremorData.start_timestamp || new Date().toISOString(),
-            tremorData.end_timestamp || new Date().toISOString(),
-            // Magnitude statistics
-            tremorData.magnitude_mean || 0,
-            tremorData.magnitude_std_dev || 0,
-            tremorData.magnitude_rms || 0,
-            tremorData.magnitude_energy || 0,
-            tremorData.magnitude_max || 0,
-            tremorData.magnitude_min || 0,
-            tremorData.magnitude_range || 0,
-            tremorData.magnitude_kurtosis || 0,
-            tremorData.magnitude_skewness || 0,
-            tremorData.magnitude_cv || 0,
-            tremorData.magnitude_peaks_rt || 0,
-            tremorData.magnitude_ssc_rt || 0,
-            // Frequency features
-            tremorData.magnitude_fft_dom_freq || 0,
-            tremorData.magnitude_fft_tot_power || 0,
-            tremorData.magnitude_fft_energy || 0,
-            tremorData.magnitude_fft_entropy || 0,
-            tremorData.tremor_band_power_mag || 0,
-            tremorData.tremor_peak_freq || 0,
-            tremorData.dominant_freq_x || 0,
-            tremorData.tremor_band_power_x || 0,
-            // Time features
-            tremorData.zero_crossing_rate_mag || 0,
-            tremorData.peak_count_mag || 0,
-            tremorData.jerk_mean || 0,
-            tremorData.jerk_std || 0,
-            tremorData.stability_index || 0,
-            tremorData.magnitude_sampen || 0,
-            // Classification
-            tremorData.rest_tremor || 0,
-            tremorData.postural_tremor || 0,
-            tremorData.kinetic_tremor || 0,
-            // Results
-            results.prediction || 'N/A',
-            `${(results.tremor_confidence || 0).toFixed(2)}%`,
-            `${(results.motion_patterns || results.tremor_confidence || 0).toFixed(2)}%`
-        ];
-
-        const data = [headers, row];
-        const ws2 = XLSX.utils.aoa_to_sheet(data);
-        
-        // Set column widths
-        ws2['!cols'] = Array(headers.length).fill({ wch: 18 });
-
-        XLSX.utils.book_append_sheet(wb, ws2, 'Tremor CSV Format');
-    }
-
-    /**
-     * Add raw motion data sheet
-     */
-    addRawMotionDataSheet(wb, motionSamples) {
-        const headers = [
-            'Timestamp',
-            'Acceleration X (m/s²)',
-            'Acceleration Y (m/s²)',
-            'Acceleration Z (m/s²)',
-            'Magnitude (m/s²)',
-            'Rotation Alpha (°/s)',
-            'Rotation Beta (°/s)',
-            'Rotation Gamma (°/s)',
-            'Interval (ms)'
-        ];
-
-        const rows = motionSamples.map(sample => [
-            sample.timestamp || 0,
-            sample.accelerationX || 0,
-            sample.accelerationY || 0,
-            sample.accelerationZ || 0,
-            Math.sqrt(
-                Math.pow(sample.accelerationX || 0, 2) +
-                Math.pow(sample.accelerationY || 0, 2) +
-                Math.pow(sample.accelerationZ || 0, 2)
-            ),
-            sample.rotationAlpha || 0,
-            sample.rotationBeta || 0,
-            sample.rotationGamma || 0,
-            sample.interval || 0
-        ]);
-
-        const data = [headers, ...rows];
         const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = Array(headers.length).fill({ wch: 20 });
+        ws['!cols'] = [
+            { wch: 35 },  // Feature name column
+            { wch: 40 }   // Value column
+        ];
 
-        XLSX.utils.book_append_sheet(wb, ws, 'Raw Motion Data');
+        XLSX.utils.book_append_sheet(wb, ws, 'Tremor Features');
     }
 
     /**
