@@ -1135,19 +1135,32 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         const subtitle = document.getElementById('result-subtitle');
         const mainBadge = document.getElementById('main-confidence-badge');
         
+        // Check for insufficient data / idle detection
+        const isInsufficient = results.prediction === 'Insufficient Data' || results.confidence < 10;
+        
         // Set result type and styling
-        if (results.prediction === 'Affected') {
+        if (isInsufficient) {
+            // Very low confidence - idle/baseline detected
+            indicator.className = 'result-indicator insufficient';
+            indicator.querySelector('.result-icon').textContent = '📱';
+            title.textContent = 'Insufficient Activity Detected';
+            subtitle.textContent = 'No meaningful voice or motion detected. Please ensure: (1) Speak clearly during voice test, (2) Hold phone steady during motion test';
+            mainBadge.textContent = `${Math.round(results.confidence)}% - Please Retry Test`;
+            mainBadge.style.background = '#9ca3af';
+        } else if (results.prediction === 'Affected') {
             indicator.className = 'result-indicator positive';
             indicator.querySelector('.result-icon').textContent = '⚠️';
             title.textContent = 'Attention Required';
             subtitle.textContent = 'Analysis suggests possible Parkinson\'s indicators detected';
             mainBadge.textContent = `${Math.round(results.confidence)}% Detection Confidence`;
+            mainBadge.style.background = '';
         } else {
             indicator.className = 'result-indicator negative';
             indicator.querySelector('.result-icon').textContent = '✅';
             title.textContent = 'No Indicators Detected';
             subtitle.textContent = 'Analysis shows normal patterns - No concerns identified';
             mainBadge.textContent = `${Math.round(results.confidence)}% Confidence`;
+            mainBadge.style.background = '';
         }
 
         // Update confidence circles with animations (values already 0-100)
@@ -1234,11 +1247,27 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const rawAudioFeatures = results.audio_features || results.raw_features || {};
             console.log('Raw Audio Features:', rawAudioFeatures);
             
-            // Simplified voice features matching the tremor layout
+            // Detailed voice features with all measured parameters
             const voiceFeatures = [
+                // Row 1 - Pattern Recognition
                 { name: 'Voice\nStability', icon: '🎵', value: results.features?.['Voice Stability'] || 0, unit: '%' },
                 { name: 'Voice\nQuality', icon: '📊', value: results.features?.['Voice Quality'] || 0, unit: '%' },
-                { name: 'Vocal\nTremor', icon: '〰️', value: results.features?.['Vocal Tremor'] || 0, unit: '%' }
+                { name: 'Vocal\nTremor', icon: '〰️', value: results.features?.['Vocal Tremor'] || 0, unit: '%' },
+                
+                // Row 2 - Pitch Analysis
+                { name: 'Pitch\nMean', icon: '🎼', value: rawAudioFeatures.pitch_mean || 0, unit: 'Hz' },
+                { name: 'Pitch Std\nDeviation', icon: '📈', value: rawAudioFeatures.pitch_std || 0, unit: 'Hz' },
+                { name: 'Pitch\nRange', icon: '📊', value: rawAudioFeatures.pitch_range || 0, unit: 'Hz' },
+                
+                // Row 3 - Voice Quality Metrics
+                { name: 'HNR\n(Harmonics)', icon: '🎚️', value: rawAudioFeatures.hnr_mean || 0, unit: 'dB' },
+                { name: 'Spectral\nCentroid', icon: '🌈', value: rawAudioFeatures.spectral_centroid_mean || 0, unit: 'Hz' },
+                { name: 'Spectral\nRolloff', icon: '📉', value: rawAudioFeatures.spectral_rolloff_mean || 0, unit: 'Hz' },
+                
+                // Row 4 - Timing and Energy
+                { name: 'Speech\nRate', icon: '⚡', value: rawAudioFeatures.speech_rate || 0, unit: 'rate' },
+                { name: 'Voiced\nFraction', icon: '🎤', value: rawAudioFeatures.voiced_fraction || 0, unit: 'ratio' },
+                { name: 'Spectral\nBandwidth', icon: '📡', value: rawAudioFeatures.spectral_bandwidth_mean || 0, unit: 'Hz' }
             ];
             
             voiceFeatures.forEach((feature, index) => {

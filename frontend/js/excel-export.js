@@ -145,8 +145,8 @@ class ExcelExporter {
             this.addTremorFeaturesSheet(wb, rawData.tremorData, results);
         }
 
-        // Raw Data Sheet
-        if (rawData.motionSamples) {
+        // Raw Motion Data Sheet - Only include for tremor or both modes, NOT for voice-only
+        if ((testMode === 'tremor' || testMode === 'both') && rawData.motionSamples) {
             this.addRawMotionDataSheet(wb, rawData.motionSamples);
         }
 
@@ -155,7 +155,7 @@ class ExcelExporter {
     }
 
     /**
-     * Add summary sheet
+     * Add summary sheet (filtered based on test mode)
      */
     addSummarySheet(wb, results, testMode) {
         const data = [
@@ -163,23 +163,45 @@ class ExcelExporter {
             [''],
             ['Test ID', this.generateTestId()],
             ['Timestamp', new Date().toISOString()],
-            ['Test Mode', testMode],
+            ['Test Mode', testMode.toUpperCase()],
             [''],
             ['ANALYSIS RESULTS'],
             ['Prediction', results.prediction || 'N/A'],
-            ['Overall Confidence', `${(results.confidence || 0).toFixed(2)}%`],
-            ['Voice Patterns', `${(results.voice_patterns || results.voice_confidence || 0).toFixed(2)}%`],
-            ['Voice Confidence', `${(results.voice_confidence || 0).toFixed(2)}%`],
-            ['Motion Patterns', `${(results.motion_patterns || results.tremor_confidence || 0).toFixed(2)}%`],
-            ['Tremor Confidence', `${(results.tremor_confidence || 0).toFixed(2)}%`],
-            [''],
-            ['METADATA'],
-            ['Processing Time (s)', results.metadata?.processing_time || 0],
-            ['Audio Duration (s)', results.metadata?.audio_duration || 0],
-            ['Motion Samples Count', results.metadata?.motion_samples || 0],
-            ['Model Version', results.metadata?.model_version || 'N/A'],
-            ['Sample Rate (Hz)', results.metadata?.sampling_rate || 100]
+            ['Overall Confidence', `${(results.confidence || 0).toFixed(2)}%`]
         ];
+
+        // Add voice-specific results only if voice or both
+        if (testMode === 'voice' || testMode === 'both') {
+            data.push(
+                ['Voice Patterns', `${(results.voice_patterns || results.voice_confidence || 0).toFixed(2)}%`],
+                ['Voice Confidence', `${(results.voice_confidence || 0).toFixed(2)}%`]
+            );
+        }
+
+        // Add tremor-specific results only if tremor or both
+        if (testMode === 'tremor' || testMode === 'both') {
+            data.push(
+                ['Motion Patterns', `${(results.motion_patterns || results.tremor_confidence || 0).toFixed(2)}%`],
+                ['Tremor Confidence', `${(results.tremor_confidence || 0).toFixed(2)}%`]
+            );
+        }
+
+        data.push([''], ['METADATA'], ['Processing Time (s)', results.metadata?.processing_time || 0]);
+
+        // Add voice metadata only if voice or both
+        if (testMode === 'voice' || testMode === 'both') {
+            data.push(['Audio Duration (s)', results.metadata?.audio_duration || 0]);
+        }
+
+        // Add tremor metadata only if tremor or both
+        if (testMode === 'tremor' || testMode === 'both') {
+            data.push(
+                ['Motion Samples Count', results.metadata?.motion_samples || 0],
+                ['Sample Rate (Hz)', results.metadata?.sampling_rate || 100]
+            );
+        }
+
+        data.push(['Model Version', results.metadata?.model_version || 'N/A']);
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 30 }, { wch: 30 }];
@@ -187,7 +209,7 @@ class ExcelExporter {
     }
 
     /**
-     * Add voice features sheet
+     * Add voice features sheet (filtered to remove specified fields)
      */
     addVoiceFeaturesSheet(wb, voiceData, results) {
         const headers = [
@@ -198,19 +220,13 @@ class ExcelExporter {
             'Description'
         ];
 
+        // Only include: Pitch Mean, Pitch Std Dev, HNR, Spectral Centroid, Spectral Rolloff
         const features = [
             ['Pitch Mean', voiceData.pitch_mean, 'Hz', voiceData.pitch_confidence, 'Average fundamental frequency'],
             ['Pitch Std Dev', voiceData.pitch_std, 'Hz', voiceData.pitch_confidence, 'Pitch variation'],
-            ['Jitter', voiceData.jitter, '%', voiceData.jitter_confidence, 'Frequency variation'],
-            ['Shimmer', voiceData.shimmer, 'dB', voiceData.shimmer_confidence, 'Amplitude variation'],
             ['HNR', voiceData.hnr, 'dB', voiceData.hnr_confidence, 'Harmonic-to-Noise Ratio'],
             ['Spectral Centroid', voiceData.spectral_centroid, 'Hz', voiceData.spectral_confidence, 'Frequency center of mass'],
-            ['Zero Crossing Rate', voiceData.zcr, 'rate', voiceData.zcr_confidence, 'Signal polarity changes'],
-            ['Energy', voiceData.energy, 'dB', voiceData.energy_confidence, 'Signal power'],
-            ['MFCC Mean', voiceData.mfcc_mean, '', voiceData.mfcc_confidence, 'Mel-frequency cepstral coefficients'],
-            ['Spectral Rolloff', voiceData.spectral_rolloff, 'Hz', voiceData.rolloff_confidence, 'Frequency below 85% energy'],
-            ['Spectral Flux', voiceData.spectral_flux, '', voiceData.flux_confidence, 'Spectral change rate'],
-            ['RMS Energy', voiceData.rms_energy, 'dB', voiceData.rms_confidence, 'Root mean square energy']
+            ['Spectral Rolloff', voiceData.spectral_rolloff, 'Hz', voiceData.rolloff_confidence, 'Frequency below 85% energy']
         ];
 
         const data = [headers, ...features];

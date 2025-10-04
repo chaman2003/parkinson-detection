@@ -77,13 +77,27 @@ class ParkinsonMLPipeline:
         voice_insights = {}
         tremor_insights = {}
         
+        # Flags for idle/baseline detection
+        voice_is_idle = False
+        tremor_is_idle = False
+        
         # Extract features only if data is provided - using optimized extractors
         if audio_path is not None:
             audio_features = self.audio_extractor.extract_features_fast(audio_path)
             # Extract insights before converting to vector
             voice_insights = audio_features.pop('_insights', {})
-            audio_vector = self._dict_to_vector(audio_features)
-            voice_pred, voice_conf = self._predict_voice(audio_vector)
+            
+            # Check for silence/idle detection
+            voice_is_idle = audio_features.pop('_silence_detected', False)
+            silence_metrics = audio_features.pop('_silence_metrics', {})
+            
+            if voice_is_idle:
+                logger.warning(f"🔇 Voice idle/silence detected - returning low confidence")
+                voice_conf = 0.05  # Very low confidence (5%)
+                voice_pred = "Insufficient Data"
+            else:
+                audio_vector = self._dict_to_vector(audio_features)
+                voice_pred, voice_conf = self._predict_voice(audio_vector)
         else:
             audio_features = {}
             voice_conf = 0.5
@@ -94,64 +108,104 @@ class ParkinsonMLPipeline:
             # Extract insights before converting to vector
             tremor_insights = tremor_features.pop('_insights', {})
             
-            # Debug log tremor features
-            logger.info(f"📊 Extracted {len(tremor_features)} tremor features")
-            logger.info(f"🔍 Key tremor values: magnitude_mean={tremor_features.get('magnitude_mean', 0):.2f}, "
-                       f"magnitude_std={tremor_features.get('magnitude_std', 0):.2f}, "
-                       f"dom_freq={tremor_features.get('magnitude_fft_dom_freq', 0):.2f}")
+            # Check for idle/baseline detection
+            tremor_is_idle = tremor_features.pop('_idle_detected', False)
+            idle_metrics = tremor_features.pop('_idle_metrics', {})
             
-            tremor_vector = self._dict_to_vector(tremor_features)
-            tremor_pred, tremor_conf = self._predict_tremor(tremor_vector)
+            if tremor_is_idle:
+                logger.warning(f"📱 Motion idle/baseline detected - returning low confidence")
+                tremor_conf = 0.05  # Very low confidence (5%)
+                tremor_pred = "Insufficient Data"
+            else:
+                # Debug log tremor features
+                logger.info(f"📊 Extracted {len(tremor_features)} tremor features")
+                logger.info(f"🔍 Key tremor values: magnitude_mean={tremor_features.get('magnitude_mean', 0):.2f}, "
+                           f"magnitude_std={tremor_features.get('magnitude_std', 0):.2f}, "
+                           f"dom_freq={tremor_features.get('magnitude_fft_dom_freq', 0):.2f}")
+                
+                tremor_vector = self._dict_to_vector(tremor_features)
+                tremor_pred, tremor_conf = self._predict_tremor(tremor_vector)
         else:
             tremor_features = {}
             tremor_conf = 0.5
             tremor_pred = "Unknown"
         
         # Determine combined prediction with intelligent feature-based boosting
+        # BUT: If either input is idle/baseline, use very low confidence
         if audio_path is not None and motion_data is not None:
-            # Both available - use weighted average with feature boost
-            voice_boost = self._calculate_voice_feature_boost(audio_features, voice_insights)
-            tremor_boost = self._calculate_tremor_feature_boost(tremor_features, tremor_insights)
-            
-            logger.info(f"📈 Pre-boost confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
-            
-            # Apply boost to individual confidences first
-            voice_conf = min(0.99, voice_conf + voice_boost)
-            tremor_conf = min(0.99, tremor_conf + tremor_boost)
-            
-            logger.info(f"🚀 Post-boost confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
-            
-            # Combined confidence
-            base_conf = (voice_conf * 0.5 + tremor_conf * 0.5)
-            total_boost = (voice_boost + tremor_boost) / 2
-            combined_conf = min(0.99, base_conf + total_boost * 0.5)  # Additional small boost to combined
-            
-            logger.info(f"✅ Final combined confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
+            # Both inputs provided
+            if voice_is_idle and tremor_is_idle:
+                # Both idle - very low confidence
+                combined_conf = 0.03
+                combined_pred = "Insufficient Data"
+                logger.warning(f"⚠️ Both voice and motion are idle - returning {combined_conf*100:.1f}% confidence")
+            elif voice_is_idle:
+                # Voice idle, but tremor active - use only tremor with penalty
+                combined_conf = tremor_conf * 0.5  # 50% penalty for missing voice
+                combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
+                logger.warning(f"⚠️ Voice idle - using tremor only with penalty: {combined_conf*100:.1f}%")
+            elif tremor_is_idle:
+                # Tremor idle, but voice active - use only voice with penalty
+                combined_conf = voice_conf * 0.5  # 50% penalty for missing motion
+                combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
+                logger.warning(f"⚠️ Motion idle - using voice only with penalty: {combined_conf*100:.1f}%")
+            else:
+                # Both active - normal processing with feature boost
+                voice_boost = self._calculate_voice_feature_boost(audio_features, voice_insights)
+                tremor_boost = self._calculate_tremor_feature_boost(tremor_features, tremor_insights)
+                
+                logger.info(f"📈 Pre-boost confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
+                
+                # Apply boost to individual confidences first
+                voice_conf = min(0.99, voice_conf + voice_boost)
+                tremor_conf = min(0.99, tremor_conf + tremor_boost)
+                
+                logger.info(f"🚀 Post-boost confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
+                
+                # Combined confidence
+                base_conf = (voice_conf * 0.5 + tremor_conf * 0.5)
+                total_boost = (voice_boost + tremor_boost) / 2
+                combined_conf = min(0.99, base_conf + total_boost * 0.5)  # Additional small boost to combined
+                combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
+                
+                logger.info(f"✅ Final combined confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
             
         elif audio_path is not None:
-            # Only voice available - apply voice boost
-            voice_boost = self._calculate_voice_feature_boost(audio_features, voice_insights)
-            voice_conf = min(0.99, voice_conf + voice_boost)
-            combined_conf = voice_conf
+            # Only voice available
+            if voice_is_idle:
+                combined_conf = 0.05
+                combined_pred = "Insufficient Data"
+                logger.warning(f"⚠️ Voice-only test with idle audio - returning {combined_conf*100:.1f}% confidence")
+            else:
+                voice_boost = self._calculate_voice_feature_boost(audio_features, voice_insights)
+                voice_conf = min(0.99, voice_conf + voice_boost)
+                combined_conf = voice_conf
+                combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
             
         elif motion_data is not None:
-            # Only tremor available - use INTENSITY-BASED confidence (not ML prediction)
-            logger.info(f"📈 Tremor-only mode - ML confidence: {tremor_conf:.3f}")
-            
-            # Calculate confidence based purely on movement intensity
-            intensity_conf = self._calculate_intensity_based_confidence(tremor_features, tremor_insights)
-            
-            # Use intensity-based confidence instead of ML prediction
-            tremor_conf = intensity_conf
-            combined_conf = intensity_conf
-            
-            logger.info(f"✅ Intensity-based final confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
+            # Only tremor available
+            if tremor_is_idle:
+                combined_conf = 0.05
+                combined_pred = "Insufficient Data"
+                logger.warning(f"⚠️ Tremor-only test with idle motion - returning {combined_conf*100:.1f}% confidence")
+            else:
+                # Use INTENSITY-BASED confidence (not ML prediction)
+                logger.info(f"📈 Tremor-only mode - ML confidence: {tremor_conf:.3f}")
+                
+                # Calculate confidence based purely on movement intensity
+                intensity_conf = self._calculate_intensity_based_confidence(tremor_features, tremor_insights)
+                
+                # Use intensity-based confidence instead of ML prediction
+                tremor_conf = intensity_conf
+                combined_conf = intensity_conf
+                combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
+                
+                logger.info(f"✅ Intensity-based final confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
             
         else:
             # Neither available (shouldn't happen)
             combined_conf = 0.5
-        
-        combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
+            combined_pred = "Not Affected"
         
         key_features = self._extract_key_features(audio_features, tremor_features)
         

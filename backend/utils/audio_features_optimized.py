@@ -35,6 +35,19 @@ class OptimizedAudioExtractor:
             if len(y) < 1000:
                 return self._get_default_features()
             
+            # Check for silence/idle state - crucial for baseline detection
+            is_silent, silence_metrics = self._detect_silence(y, sr)
+            
+            if is_silent:
+                logger.warning(f"⚠️ SILENCE DETECTED: RMS={silence_metrics['rms_db']:.1f}dB, "
+                             f"Energy={silence_metrics['energy']:.6f}, "
+                             f"Voiced={silence_metrics['voiced_percent']:.1f}%")
+                # Return minimal features indicating idle/silent state
+                features = self._get_default_features()
+                features['_silence_detected'] = True
+                features['_silence_metrics'] = silence_metrics
+                return features
+            
             # Parallel feature extraction
             with ThreadPoolExecutor(max_workers=4) as executor:
                 future_mfcc = executor.submit(self._extract_mfcc_fast, y, sr)
@@ -53,12 +66,68 @@ class OptimizedAudioExtractor:
             features.update(self._extract_temporal_fast(y, sr))
             features.update(self._extract_harmonic_fast(y, sr))
             
+            # Mark as active voice detected
+            features['_silence_detected'] = False
+            
             logger.info(f"✓ Fast extraction: {len(features)} features in optimized mode")
             return features
             
         except Exception as e:
             logger.error(f"Fast extraction failed: {e}")
             return self._get_default_features()
+    
+    def _detect_silence(self, y, sr):
+        """
+        Detect if audio is silent/idle (phone on desk with no voice)
+        Returns (is_silent, metrics_dict)
+        """
+        try:
+            # Calculate RMS energy
+            rms = librosa.feature.rms(y=y)[0]
+            rms_mean = np.mean(rms)
+            rms_db = 20 * np.log10(rms_mean + 1e-10)  # Convert to dB
+            
+            # Calculate overall energy
+            energy = np.sum(y ** 2) / len(y)
+            
+            # Calculate zero-crossing rate (voice activity indicator)
+            zcr = librosa.feature.zero_crossing_rate(y)[0]
+            zcr_mean = np.mean(zcr)
+            
+            # Check for pitch/voiced content
+            pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+            voiced_frames = 0
+            total_frames = pitches.shape[1]
+            
+            for t in range(total_frames):
+                index = magnitudes[:, t].argmax()
+                pitch = pitches[index, t]
+                if pitch > 50:  # Valid voice pitch
+                    voiced_frames += 1
+            
+            voiced_percent = (voiced_frames / total_frames) * 100 if total_frames > 0 else 0
+            
+            # Determine if silent based on multiple criteria
+            is_silent = (
+                rms_db < -40 or  # Very low volume (quieter than quiet room)
+                energy < 0.001 or  # Minimal energy
+                voiced_percent < 5  # Less than 5% voiced content
+            )
+            
+            metrics = {
+                'rms_db': float(rms_db),
+                'energy': float(energy),
+                'zcr_mean': float(zcr_mean),
+                'voiced_percent': float(voiced_percent),
+                'rms_mean': float(rms_mean)
+            }
+            
+            return is_silent, metrics
+            
+        except Exception as e:
+            logger.warning(f"Silence detection error: {e}")
+            # If detection fails, assume not silent to avoid false negatives
+            return False, {}
     
     def _extract_mfcc_fast(self, y, sr):
         """Extract MFCC features efficiently - 52 features"""

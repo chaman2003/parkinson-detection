@@ -481,6 +481,11 @@ body {
     color: white;
 }
 
+.result-indicator.insufficient {
+    background: linear-gradient(135deg, #9ca3af, #6b7280);
+    color: white;
+}
+
 .result-icon {
     font-size: 4rem;
     margin-bottom: 1rem;

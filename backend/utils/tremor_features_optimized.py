@@ -37,6 +37,19 @@ class OptimizedTremorExtractor:
             # Calculate magnitude vector (combines all axes)
             magnitude = np.sqrt(accel_x**2 + accel_y**2 + accel_z**2)
             
+            # Check for idle/baseline state (phone sitting still on desk)
+            is_idle, idle_metrics = self._detect_idle_baseline(magnitude, accel_x, accel_y, accel_z)
+            
+            if is_idle:
+                logger.warning(f"⚠️ IDLE/BASELINE DETECTED: Std={idle_metrics['std']:.4f}, "
+                             f"Range={idle_metrics['range']:.4f}, "
+                             f"Variation={idle_metrics['variation_percent']:.2f}%")
+                # Return minimal features indicating idle/baseline state
+                features = self._get_default_features()
+                features['_idle_detected'] = True
+                features['_idle_metrics'] = idle_metrics
+                return features
+            
             # Extract sampling rate from timestamps
             if len(timestamps) > 1:
                 dt_values = np.diff(timestamps) / 1000.0  # Convert ms to seconds
@@ -55,6 +68,9 @@ class OptimizedTremorExtractor:
             # 3. Time Domain Features (5 features - movement patterns)
             features.update(self._extract_time_features(magnitude, sampling_rate))
             
+            # Mark as active motion detected
+            features['_idle_detected'] = False
+            
             logger.info(f"✓ Fast extraction: {len(features)} tremor features from {len(motion_data)} samples")
             
             # Real-time insights
@@ -66,6 +82,61 @@ class OptimizedTremorExtractor:
         except Exception as e:
             logger.error(f"Fast tremor extraction failed: {e}")
             return self._get_default_features()
+    
+    def _detect_idle_baseline(self, magnitude, accel_x, accel_y, accel_z):
+        """
+        Detect if phone is idle/sitting still on desk with no meaningful motion
+        Returns (is_idle, metrics_dict)
+        """
+        try:
+            # Calculate variation metrics
+            mag_std = np.std(magnitude)
+            mag_range = np.max(magnitude) - np.min(magnitude)
+            mag_mean = np.mean(magnitude)
+            
+            # Calculate coefficient of variation (CV)
+            cv = (mag_std / mag_mean * 100) if mag_mean > 0 else 0
+            
+            # Check individual axes variation
+            x_std = np.std(accel_x)
+            y_std = np.std(accel_y)
+            z_std = np.std(accel_z)
+            total_std = x_std + y_std + z_std
+            
+            # Calculate approximate gravity (should be ~9.8 m/s² when still)
+            # If magnitude is close to gravity with low variation, it's idle
+            gravity_diff = abs(mag_mean - 9.8)
+            
+            # Detect idle if:
+            # 1. Very low standard deviation (< 0.1 m/s²)
+            # 2. Small range of motion (< 0.3 m/s²)
+            # 3. Low coefficient of variation (< 2%)
+            # 4. Or magnitude close to gravity with minimal variation
+            is_idle = (
+                mag_std < 0.15 or  # Very stable readings
+                mag_range < 0.4 or  # Minimal motion
+                cv < 3 or  # Very low relative variation
+                (gravity_diff < 0.5 and mag_std < 0.2)  # Still, near gravity
+            )
+            
+            metrics = {
+                'std': float(mag_std),
+                'range': float(mag_range),
+                'mean': float(mag_mean),
+                'variation_percent': float(cv),
+                'total_axis_std': float(total_std),
+                'gravity_diff': float(gravity_diff),
+                'x_std': float(x_std),
+                'y_std': float(y_std),
+                'z_std': float(z_std)
+            }
+            
+            return is_idle, metrics
+            
+        except Exception as e:
+            logger.warning(f"Idle detection error: {e}")
+            # If detection fails, assume not idle to avoid false negatives
+            return False, {}
     
     def _parse_fast(self, motion_data):
         """Parse motion data efficiently"""

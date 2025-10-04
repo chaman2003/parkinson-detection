@@ -323,54 +323,134 @@ docker run -p 5000:5000 -p 8000:8000 parkinson-detection
 
 ## 🚀 Usage
 
-### 📱 Mobile Testing
+### 🌐 Deployment Options
 
-#### Voice Analysis
-1. **Grant Permissions**: Allow microphone access
-2. **Position Device**: Hold phone 6-8 inches from mouth
-3. **Speak Clearly**: Say "ahh" for 3-5 seconds
-4. **View Results**: Real-time voice quality metrics
+#### Option 1: InstaTunnel (Recommended for Production)
+```powershell
+# Quick start with InstaTunnel
+.\run-instatunnel.ps1
+```
 
-#### Motion Analysis
-1. **Enable Sensors**: Grant motion sensor permissions
-2. **Secure Context**: Ensure HTTPS connection
-3. **Movement Test**: Hold device and perform requested movements
-4. **Analysis**: System analyzes tremor patterns
+**Your Active Tunnel:** `https://parkinson-backend.instatunnel.my`
 
-### 📊 Results Interpretation
+**Advantages:**
+- ✅ Persistent URL (doesn't change on restart)
+- ✅ No warning pages (API-friendly)
+- ✅ Custom subdomain support
+- ✅ Free tier available
 
-#### Confidence Levels
-- **0-45%**: Low probability, minimal indicators
-- **45-65%**: Moderate probability, some indicators present
-- **65-85%**: High probability, multiple indicators
-- **85-100%**: Very high probability, strong indicators
+**Setup:** See `INSTATUNNEL_QUICKSTART.md` for 2-minute setup guide
 
-#### Feature Categories
-- **Voice Features**: Pitch stability, voice quality, vocal tremor
-- **Motion Features**: Tremor frequency, postural stability, movement variability
-- **Combined Analysis**: Weighted assessment of all indicators
+#### Option 2: Local Development
+```powershell
+# Run locally without tunnel
+.\run.ps1
+```
 
-### 📈 Data Export
+Backend runs on `http://localhost:5000`
 
-#### Excel Report Types
-- **Simple Report**: Summary with key metrics
-- **Detailed Report**: Comprehensive analysis with all features
-- **Raw Data**: Complete sensor readings for research
+#### Option 3: Vercel + InstaTunnel (Production)
+- **Frontend:** Deployed on Vercel (`parkinson-detection.vercel.app`)
+- **Backend:** Local with InstaTunnel tunnel
+- **Config:** Set `BACKEND_URL` in Vercel environment variables
 
-#### Export Features
+See `VERCEL_DEPLOYMENT.md` for complete guide.
+
+---
+
+### 🌐 Deployment Options
+
+You can expose the local backend for mobile or remote testing in two common ways:
+
+- ngrok: fast, temporary tunnels for local development
+- InstaTunnel: persistent subdomain for long-running demos or production-like testing
+
+Choose the one that fits your workflow. Both options forward traffic to the local Flask server running on port 5000.
+
+---
+
+#### Option A — ngrok (Local development; short-lived tunnel)
+
+Use ngrok when you want a quick URL for testing from your phone or remote devices. ngrok URLs change each time you start the tunnel (unless you have a paid account and reserved domains).
+
+1. Install ngrok: https://ngrok.com/download
+2. Authenticate (only once):
+
+```powershell
+ngrok.exe authtoken <YOUR_NGROK_AUTHTOKEN>
+```
+
+3. Start your backend locally (from `backend/`):
+
+```powershell
 ```javascript
 // Programmatic export
 const exporter = new ExcelExporter();
 await exporter.exportDetailedData(results, testMode, rawData);
+
+4. In a new terminal start ngrok to forward port 5000:
+
+```powershell
 ```
 
+
+5. ngrok will print a forwarding URL like `https://abcd1234.ngrok.io` — use that as your `BACKEND_URL` for remote clients or Vercel during tests.
+
+Notes:
+- ngrok injects its own HTTPS termination; you still need to use the ngrok HTTPS URL for sensors to work.
+- ngrok is temporary — the URL changes on restart unless you reserve a domain.
+
+---
+
+#### Option B — InstaTunnel (Persistent subdomain; recommended for demos)
+
+InstaTunnel provides a persistent custom subdomain (`parkinson-backend.instatunnel.my`). This is helpful for continuous demos or when you don't want the tunnel URL to change.
+
+1. Make sure the InstaTunnel client is installed and available on your PATH.
+2. Start your backend locally (from `backend/`):
+
+```powershell
 ---
 
 ## 📡 API Documentation
 
-### 🔗 Base URL
+3. Start InstaTunnel in a separate terminal (keep it running):
+
+```powershell
+
+### � Base URL
+
+4. Confirm the tunnel is connected by curling the health endpoint:
+
+```powershell
 ```
 http://localhost:5000/api
+
+5. Use `https://parkinson-backend.instatunnel.my` as your `BACKEND_URL` in the frontend or in Vercel environment variables.
+
+Important notes about InstaTunnel and CORS:
+- Some proxies (including InstaTunnel) add CORS headers. If you modified the backend to also add CORS headers, you may end up with duplicate values (e.g. `*, *`). We recommend using the included `backend.ps1` / `run.ps1` scripts which already handle the recommended configuration.
+- Keep the InstaTunnel client running while using the app. If the client stops the tunnel will return 503 Service Unavailable.
+
+---
+
+#### Option C — Deploy frontend to Vercel + local tunnel backend
+
+This is useful when you want a production-like frontend (on Vercel) to talk to your local backend for demos.
+
+1. Deploy the `frontend` to Vercel as usual.
+2. Start your chosen tunnel (ngrok or InstaTunnel) and note the HTTPS URL.
+3. In the Vercel dashboard set an environment variable:
+
+- Name: `BACKEND_URL`
+- Value: `https://<your-tunnel-domain>` (e.g. `https://parkinson-backend.instatunnel.my` or `https://abcd1234.ngrok.io`)
+
+4. Redeploy the Vercel project (or trigger a redeploy) so the frontend uses the new `BACKEND_URL`.
+
+Tips:
+- Hard-refresh the Vercel site (`CTRL + SHIFT + R`) after changing tunnels to clear cached preflight/CORS responses.
+- If you see CORS issues, try an Incognito/Private window to rule out cached preflight results.
+
 ```
 
 ### 📋 Endpoints

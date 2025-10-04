@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, Response, stream_with_context
-from flask_cors import CORS
+# flask_cors removed - manual CORS handling to prevent duplicate headers with InstaTunnel
 import os
 import sys
 import json
@@ -104,17 +104,11 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 app.config['THREADED'] = True  # Enable threading for concurrent requests
 
-# Enable CORS for all origins (needed for ngrok tunnels and Vercel deployment)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": "*",  # Allow all origins (includes Vercel and local development)
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "expose_headers": ["Content-Type", "Cache-Control", "X-Accel-Buffering"],
-        "supports_credentials": False,
-        "max_age": 3600  # Cache preflight requests for 1 hour
-    }
-})
+# CORS disabled - InstaTunnel proxy adds all necessary CORS headers automatically
+# No need to add our own, as it causes duplicates (*, * instead of *)
+# InstaTunnel adds: Access-Control-Allow-Origin: *
+#                   Access-Control-Allow-Methods: POST, OPTIONS, GET, PUT, DELETE
+#                   Access-Control-Allow-Headers: Content-Type, Authorization, etc.
 
 # Initialize utilities
 try:
@@ -919,6 +913,8 @@ def not_found(e):
 @app.errorhandler(500)
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
+
+# OPTIONS preflight handled by InstaTunnel proxy - no need for manual handler
 
 if __name__ == '__main__':
     print("\n" + "="*70)
