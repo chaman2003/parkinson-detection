@@ -202,6 +202,18 @@ class ExcelExporter {
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 30 }, { wch: 30 }];
+        
+        // Apply left alignment to all cells
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[cellAddress]) continue;
+                if (!ws[cellAddress].s) ws[cellAddress].s = {};
+                ws[cellAddress].s.alignment = { horizontal: 'left' };
+            }
+        }
+        
         XLSX.utils.book_append_sheet(wb, ws, 'Summary');
     }
 
@@ -219,8 +231,8 @@ class ExcelExporter {
             ['Voice Patterns', `${(results.voice_patterns || results.voice_confidence || 0).toFixed(2)}%`],
             [''],
             ['AUDIO METADATA'],
-            ['Audio Duration', `${(voiceData.duration || results.metadata?.audio_duration || 0).toFixed(2)} seconds`],
-            ['Sample Rate', `${voiceData.sample_rate || 'N/A'} Hz`],
+            ['Audio Duration', `${(voiceData.duration || results.audio_features?.duration || results.metadata?.audio_duration || 0).toFixed(2)} seconds`],
+            ['Sample Rate', `${voiceData.sample_rate || results.audio_features?.sample_rate || 'N/A'} Hz`],
             ['Test ID', this.generateTestId()],
             ['Timestamp', new Date().toISOString()],
             [''],
@@ -246,6 +258,17 @@ class ExcelExporter {
             { wch: 40 }   // Value column
         ];
 
+        // Apply left alignment to all cells
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[cellAddress]) continue;
+                if (!ws[cellAddress].s) ws[cellAddress].s = {};
+                ws[cellAddress].s.alignment = { horizontal: 'left' };
+            }
+        }
+
         XLSX.utils.book_append_sheet(wb, ws, 'Voice Features');
     }
 
@@ -269,7 +292,8 @@ class ExcelExporter {
             ['Motion Samples Count', results.metadata?.motion_samples || 0],
             ['Sample Rate', `${results.metadata?.sampling_rate || 100} Hz`],
             [''],
-            ['PATTERN FEATURES (0-100 scale)'],
+            ['KEY METRICS'],
+            ['Tremor Frequency', `${(tremorData.magnitude_fft_dom_freq || 0).toFixed(2)} Hz`],
             ['Tremor Frequency Score', `${(results.features?.['Tremor Frequency'] || 0).toFixed(2)}%`],
             ['Postural Stability Score', `${(results.features?.['Postural Stability'] || 0).toFixed(2)}%`],
             ['Motion Variability Score', `${(results.features?.['Motion Variability'] || 0).toFixed(2)}%`],
@@ -307,7 +331,6 @@ class ExcelExporter {
             ['STABILITY METRICS'],
             ['Stability Index', `${(tremorData.stability_index || 0).toFixed(4)}`],
             ['Sample Entropy', `${(tremorData.magnitude_sampen || 0).toFixed(4)}`],
-            ['DFA Alpha', `${(tremorData.magnitude_dfa || 0).toFixed(4)}`],
             [''],
             ['DISCLAIMER'],
             ['This is a research tool and not a medical diagnosis.'],
@@ -319,6 +342,17 @@ class ExcelExporter {
             { wch: 35 },  // Feature name column
             { wch: 40 }   // Value column
         ];
+
+        // Apply left alignment to all cells
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[cellAddress]) continue;
+                if (!ws[cellAddress].s) ws[cellAddress].s = {};
+                ws[cellAddress].s.alignment = { horizontal: 'left' };
+            }
+        }
 
         XLSX.utils.book_append_sheet(wb, ws, 'Tremor Features');
     }

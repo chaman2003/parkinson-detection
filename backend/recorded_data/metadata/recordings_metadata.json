@@ -197,6 +197,48 @@
         "Voice Stability": 0.0,
         "Voice Quality": 59.3
       }
+    },
+    {
+      "recording_id": "voice_20251004_223902_114342",
+      "timestamp": "2025-10-04T22:39:02.116710",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251004_223902_114342.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 99.0,
+      "voice_confidence": 83.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 52.3,
+        "Tremor Frequency": 0.0,
+        "Postural Stability": 59.1,
+        "Motion Variability": 50.2
+      }
+    },
+    {
+      "recording_id": "voice_20251004_224522_913184",
+      "timestamp": "2025-10-04T22:45:22.915135",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251004_224522_913184.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251004_224616_343906",
+      "timestamp": "2025-10-04T22:46:16.345686",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251004_224616_343906.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 83.0,
+      "voice_confidence": 83.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 23.8
+      }
     }
   ],
   "tremor_recordings": [
@@ -379,14 +421,30 @@
       "confidence": 92.21,
       "tremor_confidence": 92.21,
       "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251004_223902_120215",
+      "timestamp": "2025-10-04T22:39:02.128313",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 99.0,
+      "tremor_confidence": 95.0,
+      "user_label": null
     }
   ],
-  "total_recordings": 35,
+  "total_recordings": 39,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",
       "voice_recording_id": "voice_20251004_203633_078385",
       "tremor_recording_id": "tremor_20251004_203633_082405",
+      "combined_prediction": "Affected",
+      "combined_confidence": 99.0
+    },
+    {
+      "timestamp": "2025-10-04T22:39:02.130199",
+      "voice_recording_id": "voice_20251004_223902_114342",
+      "tremor_recording_id": "tremor_20251004_223902_120215",
       "combined_prediction": "Affected",
       "combined_confidence": 99.0
     }
