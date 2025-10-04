@@ -32,14 +32,15 @@ const AppConfig = {
             console.log('🏠 Local development mode detected');
             return '/api';
         } else {
-            // Production (Vercel): use environment variable
+            // Production (Vercel): use environment variable + /api path
             // Vercel will inject BACKEND_URL as a global variable
             const backendUrl = window.BACKEND_URL || 
                              (typeof process !== 'undefined' && process.env?.BACKEND_URL);
             
             if (backendUrl) {
                 console.log('🚀 Production mode: Using configured backend URL');
-                return backendUrl;
+                // Add /api to the backend URL for production
+                return backendUrl + '/api';
             } else {
                 console.error('⚠️ BACKEND_URL not configured in Vercel environment variables!');
                 console.error('Please add BACKEND_URL environment variable in Vercel dashboard');

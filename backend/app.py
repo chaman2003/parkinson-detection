@@ -104,13 +104,15 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 app.config['THREADED'] = True  # Enable threading for concurrent requests
 
-# Enable CORS for all origins (needed for ngrok tunnels)
+# Enable CORS for all origins (needed for ngrok tunnels and Vercel deployment)
 CORS(app, resources={
     r"/api/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"],
-        "expose_headers": ["Content-Type", "Cache-Control", "X-Accel-Buffering"]
+        "origins": "*",  # Allow all origins (includes Vercel and local development)
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "expose_headers": ["Content-Type", "Cache-Control", "X-Accel-Buffering"],
+        "supports_credentials": False,
+        "max_age": 3600  # Cache preflight requests for 1 hour
     }
 })
 

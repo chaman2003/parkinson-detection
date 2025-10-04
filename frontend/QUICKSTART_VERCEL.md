@@ -23,6 +23,7 @@ This starts your Flask backend and creates the ngrok tunnel at:
    - Name: `BACKEND_URL`
    - Value: `https://freezingly-nonsignificative-edison.ngrok-free.dev`
    - ⚠️ No trailing slash!
+   - ⚠️ Do NOT include `/api` (automatically added by config)
 
 5. Click **Deploy**
 
@@ -39,7 +40,7 @@ Visit your Vercel URL: `https://your-project.vercel.app`
 - [ ] Browser console shows: `🚀 Production mode: Using configured backend URL`
 - [ ] Voice and tremor tests work
 
-## 🔧 Local Development (Unchanged)
+## 🔧 Local Development 
 
 The local workflow remains the same:
 ```powershell
