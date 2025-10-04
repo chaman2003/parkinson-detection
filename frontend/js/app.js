@@ -1526,33 +1526,25 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         const metadata = results.metadata || {};
         
         return {
-            // Audio metadata (FIXED: now includes duration and sample_rate)
+            // Audio metadata
             duration: metadata.audio_duration || audioFeatures.duration || 0,
             sample_rate: audioFeatures.sample_rate || metadata.sample_rate || 22050,
             
-            // Pitch features
+            // Pitch features (matching UI display)
             pitch_mean: audioFeatures.pitch_mean || 0,
             pitch_std: audioFeatures.pitch_std || 0,
+            pitch_range: audioFeatures.pitch_range || 0,
             
             // Voice quality metrics
-            jitter_local: audioFeatures.jitter_local || audioFeatures.pitch_jitter || 0,
-            shimmer_local: audioFeatures.shimmer_local || audioFeatures.amplitude_shimmer || 0,
             hnr_mean: audioFeatures.hnr_mean || audioFeatures.hnr || 0,
             
-            // Spectral features
+            // Spectral features (matching UI display)
             spectral_centroid: audioFeatures.spectral_centroid_mean || audioFeatures.spectral_centroid || 0,
             spectral_rolloff: audioFeatures.spectral_rolloff_mean || audioFeatures.spectral_rolloff || 0,
-            spectral_flux: audioFeatures.spectral_flux_mean || audioFeatures.spectral_flux || 0,
+            spectral_bandwidth: audioFeatures.spectral_bandwidth_mean || audioFeatures.spectral_bandwidth || 0,
             
-            // Time-domain features
-            zcr_mean: audioFeatures.zero_crossing_rate_mean || audioFeatures.zcr || 0,
-            energy_mean: audioFeatures.energy_mean || audioFeatures.energy || 0,
-            rms_energy: audioFeatures.rms_energy_mean || audioFeatures.rms_energy || 0,
-            
-            // MFCC features
-            mfcc_mean_1: audioFeatures.mfcc_mean_1 || audioFeatures.mfcc_1 || 0,
-            mfcc_mean_2: audioFeatures.mfcc_mean_2 || audioFeatures.mfcc_2 || 0,
-            mfcc_mean_3: audioFeatures.mfcc_mean_3 || audioFeatures.mfcc_3 || 0
+            // Speech rate (matching UI display)
+            speech_rate: audioFeatures.speech_rate || 0
         };
     }
 
