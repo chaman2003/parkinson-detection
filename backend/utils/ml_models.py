@@ -6,11 +6,16 @@ import numpy as np
 import os
 import pickle
 import logging
+import sys
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 import xgboost as xgb
+
+# Add parent directory to path for custom_scaler import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from custom_scaler import CustomStandardScaler
+from feature_mapper import map_features_to_training_format, features_dict_to_array
 
 from .audio_features_optimized import OptimizedAudioExtractor
 from .tremor_features_optimized import OptimizedTremorExtractor
@@ -49,7 +54,7 @@ class ParkinsonMLPipeline:
     
     def train_models(self, X_voice, y_voice, X_tremor, y_tremor):
         logger.info("Training voice model...")
-        self.voice_scaler = StandardScaler()
+        self.voice_scaler = CustomStandardScaler()
         X_voice_scaled = self.voice_scaler.fit_transform(X_voice)
         self.voice_model = self.build_ensemble_model('voice')
         self.voice_model.fit(X_voice_scaled, y_voice)
@@ -57,7 +62,7 @@ class ParkinsonMLPipeline:
         logger.info(f"Voice model CV accuracy: {voice_scores.mean():.3f}")
         
         logger.info("Training tremor model...")
-        self.tremor_scaler = StandardScaler()
+        self.tremor_scaler = CustomStandardScaler()
         X_tremor_scaled = self.tremor_scaler.fit_transform(X_tremor)
         self.tremor_model = self.build_ensemble_model('tremor')
         self.tremor_model.fit(X_tremor_scaled, y_tremor)
@@ -91,17 +96,20 @@ class ParkinsonMLPipeline:
             voice_is_idle = audio_features.pop('_silence_detected', False)
             silence_metrics = audio_features.pop('_silence_metrics', {})
             
+            # ALWAYS create audio vector for dataset matching
+            audio_vector = self._dict_to_vector(audio_features)
+            
             if voice_is_idle:
                 logger.warning(f"🔇 Voice idle/silence detected - returning low confidence")
                 voice_conf = 0.05  # Very low confidence (5%)
                 voice_pred = "Insufficient Data"
             else:
-                audio_vector = self._dict_to_vector(audio_features)
                 voice_pred, voice_conf = self._predict_voice(audio_vector)
         else:
             audio_features = {}
             voice_conf = 0.5
             voice_pred = "Unknown"
+            audio_vector = None
         
         if motion_data is not None:
             tremor_features = self.tremor_extractor.extract_features_fast(motion_data)
@@ -112,23 +120,30 @@ class ParkinsonMLPipeline:
             tremor_is_idle = tremor_features.pop('_idle_detected', False)
             idle_metrics = tremor_features.pop('_idle_metrics', {})
             
+            # ALWAYS map features to training format (25 features)
+            mapped_tremor_features = map_features_to_training_format(tremor_features)
+            
+            # Convert to ordered array (25 features in correct order)
+            tremor_vector = features_dict_to_array(mapped_tremor_features)
+            
             if tremor_is_idle:
                 logger.warning(f"📱 Motion idle/baseline detected - returning low confidence")
                 tremor_conf = 0.05  # Very low confidence (5%)
                 tremor_pred = "Insufficient Data"
             else:
                 # Debug log tremor features
-                logger.info(f"📊 Extracted {len(tremor_features)} tremor features")
-                logger.info(f"🔍 Key tremor values: magnitude_mean={tremor_features.get('magnitude_mean', 0):.2f}, "
-                           f"magnitude_std={tremor_features.get('magnitude_std', 0):.2f}, "
-                           f"dom_freq={tremor_features.get('magnitude_fft_dom_freq', 0):.2f}")
+                logger.info(f"📊 Mapped to {len(mapped_tremor_features)} tremor features (training format)")
+                logger.info(f"🔍 Key tremor values: Magnitude_mean={mapped_tremor_features.get('Magnitude_mean', 0):.2f}, "
+                           f"Magnitude_std_dev={mapped_tremor_features.get('Magnitude_std_dev', 0):.2f}, "
+                           f"Magnitude_fft_dom_freq={mapped_tremor_features.get('Magnitude_fft_dom_freq', 0):.2f}")
+                logger.info(f"✅ Tremor vector shape: {tremor_vector.shape}")
                 
-                tremor_vector = self._dict_to_vector(tremor_features)
                 tremor_pred, tremor_conf = self._predict_tremor(tremor_vector)
         else:
             tremor_features = {}
             tremor_conf = 0.5
             tremor_pred = "Unknown"
+            tremor_vector = None
         
         # Determine combined prediction with intelligent feature-based boosting
         # BUT: If either input is idle/baseline, use very low confidence
@@ -150,22 +165,11 @@ class ParkinsonMLPipeline:
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
                 logger.warning(f"⚠️ Motion idle - using voice only with penalty: {combined_conf*100:.1f}%")
             else:
-                # Both active - normal processing with feature boost
-                voice_boost = self._calculate_voice_feature_boost(audio_features, voice_insights)
-                tremor_boost = self._calculate_tremor_feature_boost(tremor_features, tremor_insights)
+                # Both active - use raw ML predictions without synthetic boost
+                logger.info(f"� Raw ML confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
                 
-                logger.info(f"📈 Pre-boost confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
-                
-                # Apply boost to individual confidences first
-                voice_conf = min(0.99, voice_conf + voice_boost)
-                tremor_conf = min(0.99, tremor_conf + tremor_boost)
-                
-                logger.info(f"🚀 Post-boost confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
-                
-                # Combined confidence
-                base_conf = (voice_conf * 0.5 + tremor_conf * 0.5)
-                total_boost = (voice_boost + tremor_boost) / 2
-                combined_conf = min(0.99, base_conf + total_boost * 0.5)  # Additional small boost to combined
+                # Combined confidence - simple average of both models
+                combined_conf = (voice_conf * 0.5 + tremor_conf * 0.5)
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
                 
                 logger.info(f"✅ Final combined confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
@@ -177,10 +181,10 @@ class ParkinsonMLPipeline:
                 combined_pred = "Insufficient Data"
                 logger.warning(f"⚠️ Voice-only test with idle audio - returning {combined_conf*100:.1f}% confidence")
             else:
-                voice_boost = self._calculate_voice_feature_boost(audio_features, voice_insights)
-                voice_conf = min(0.99, voice_conf + voice_boost)
+                # Use raw ML prediction without synthetic boost
                 combined_conf = voice_conf
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
+                logger.info(f"📊 Voice-only raw ML confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
             
         elif motion_data is not None:
             # Only tremor available
@@ -189,18 +193,10 @@ class ParkinsonMLPipeline:
                 combined_pred = "Insufficient Data"
                 logger.warning(f"⚠️ Tremor-only test with idle motion - returning {combined_conf*100:.1f}% confidence")
             else:
-                # Use INTENSITY-BASED confidence (not ML prediction)
-                logger.info(f"📈 Tremor-only mode - ML confidence: {tremor_conf:.3f}")
-                
-                # Calculate confidence based purely on movement intensity
-                intensity_conf = self._calculate_intensity_based_confidence(tremor_features, tremor_insights)
-                
-                # Use intensity-based confidence instead of ML prediction
-                tremor_conf = intensity_conf
-                combined_conf = intensity_conf
+                # Use raw ML prediction without synthetic boost or intensity calculation
+                combined_conf = tremor_conf
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
-                
-                logger.info(f"✅ Intensity-based final confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
+                logger.info(f"📊 Tremor-only raw ML confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
             
         else:
             # Neither available (shouldn't happen)
@@ -300,12 +296,16 @@ class ParkinsonMLPipeline:
             key_features['Voice Quality'] = round(max(0, min(1, (audio_features['hnr'] + 10) / 30.0)) * 100, 1)
         if 'pitch_jitter' in audio_features:
             key_features['Vocal Tremor'] = round((1.0 - (1.0 - min(audio_features['pitch_jitter'] / 10.0, 1.0))) * 100, 1)
-        if 'tremor_band_power_mag' in tremor_features:
-            key_features['Tremor Frequency'] = round(min(tremor_features['tremor_band_power_mag'] / 100.0, 1.0) * 100, 1)
-        if 'stability_index' in tremor_features:
-            key_features['Postural Stability'] = round((1.0 - min(tremor_features['stability_index'], 1.0)) * 100, 1)
-        if 'magnitude_std' in tremor_features:
-            key_features['Motion Variability'] = round(min(tremor_features['magnitude_std'] / 10.0, 1.0) * 100, 1)
+        # Map tremor features if needed
+        if tremor_features:
+            tremor_mapped = map_features_to_training_format(tremor_features) if 'magnitude_mean' in tremor_features else tremor_features
+            
+            if 'Magnitude_fft_entropy' in tremor_mapped:
+                key_features['Tremor Frequency'] = round(min(tremor_mapped['Magnitude_fft_entropy'] / 10.0, 1.0) * 100, 1)
+            if 'Magnitude_dfa' in tremor_mapped:
+                key_features['Postural Stability'] = round((1.0 - min(tremor_mapped['Magnitude_dfa'], 1.0)) * 100, 1)
+            if 'Magnitude_std_dev' in tremor_mapped:
+                key_features['Motion Variability'] = round(min(tremor_mapped['Magnitude_std_dev'] / 10.0, 1.0) * 100, 1)
         return key_features
     
     def _generate_comprehensive_insights(self, voice_insights, tremor_insights, voice_conf, tremor_conf, combined_conf):
@@ -380,11 +380,11 @@ class ParkinsonMLPipeline:
         Slight movements -> ~50%, Moderate -> ~70%, Intense -> ~90%
         This replaces ML prediction with physics-based assessment.
         """
-        magnitude_mean = tremor_features.get('magnitude_mean', 0)
-        magnitude_std = tremor_features.get('magnitude_std', 0)
-        magnitude_rms = tremor_features.get('magnitude_rms', 0)
-        tremor_band_power = tremor_features.get('tremor_band_power_mag', 0)
-        dom_freq = tremor_features.get('magnitude_fft_dom_freq', 0)
+        magnitude_mean = tremor_features.get('Magnitude_mean', 0)
+        magnitude_std = tremor_features.get('Magnitude_std_dev', 0)
+        magnitude_rms = tremor_features.get('Magnitude_rms', 0)
+        tremor_band_power = tremor_features.get('tremor_band_power_mag', 0)  # Not in training data, keep as is
+        dom_freq = tremor_features.get('Magnitude_fft_dom_freq', 0)
         
         logger.info(f"🎯 Intensity-based confidence calculation:")
         logger.info(f"   - Magnitude mean: {magnitude_mean:.2f} m/s²")
@@ -489,9 +489,9 @@ class ParkinsonMLPipeline:
         """
         boost = 0.0
         
-        # Log features for debugging
-        magnitude_mean = tremor_features.get('magnitude_mean', 0)
-        logger.info(f"🔍 Tremor boost calculation - magnitude_mean: {magnitude_mean}")
+        # Log features for debugging - use mapped feature names
+        magnitude_mean = tremor_features.get('Magnitude_mean', 0)
+        logger.info(f"🔍 Tremor boost calculation - Magnitude_mean: {magnitude_mean}")
         
         # MAJOR BOOST: Any movement above 5 m/s² gets substantial boost
         if magnitude_mean > 5:  # Lowered threshold significantly
@@ -505,36 +505,37 @@ class ParkinsonMLPipeline:
             logger.info(f"📊 Moderate magnitude boost: {boost:.3f}")
         
         # Magnitude standard deviation (higher = more tremor/variation)
-        if 'magnitude_std' in tremor_features:
-            mag_std = tremor_features['magnitude_std']
+        if 'Magnitude_std_dev' in tremor_features:
+            mag_std = tremor_features['Magnitude_std_dev']
             if mag_std > 0.5:  # Lowered threshold
                 boost += min(0.12, mag_std / 10)  # Increased to 0.12
                 logger.info(f"📈 Std dev boost: {mag_std:.3f} -> +{min(0.12, mag_std / 10):.3f}")
         
         # RMS energy (higher = stronger tremor) - much higher weight
-        if 'magnitude_rms' in tremor_features:
-            rms = tremor_features['magnitude_rms']
+        if 'Magnitude_rms' in tremor_features:
+            rms = tremor_features['Magnitude_rms']
             if rms > 5:  # Lowered threshold
                 boost += min(0.10, (rms - 5) / 10)  # Increased to 0.10
                 logger.info(f"⚡ RMS boost: {rms:.3f} -> +{min(0.10, (rms - 5) / 10):.3f}")
         
-        # Tremor band power (4-6 Hz) - key Parkinson's indicator
-        if 'tremor_band_power_mag' in tremor_features:
-            band_power = tremor_features['tremor_band_power_mag']
-            if band_power > 0.01:  # Very low threshold
-                boost += min(0.08, band_power * 2)  # Doubled multiplier
-                logger.info(f"🎯 Band power boost: {band_power:.4f} -> +{min(0.08, band_power * 2):.3f}")
+        # Tremor band power - calculated from FFT (not directly in mapped features)
+        # Use as approximation from entropy
+        if 'Magnitude_fft_entropy' in tremor_features:
+            entropy = tremor_features['Magnitude_fft_entropy']
+            if entropy > 2.0:  # Higher entropy suggests varied frequency content
+                boost += min(0.08, entropy / 30)
+                logger.info(f"🎯 Entropy boost: {entropy:.4f} -> +{min(0.08, entropy / 30):.3f}")
         
         # Dominant frequency - any activity gets boost
-        if 'magnitude_fft_dom_freq' in tremor_features:
-            dom_freq = tremor_features['magnitude_fft_dom_freq']
+        if 'Magnitude_fft_dom_freq' in tremor_features:
+            dom_freq = tremor_features['Magnitude_fft_dom_freq']
             if dom_freq > 1.0:  # Very broad range
                 boost += 0.05  # Increased boost
                 logger.info(f"📳 Frequency boost: {dom_freq:.2f} Hz -> +0.05")
         
         # Peak rate (more peaks = more tremor activity)
-        if 'magnitude_peaks_rt' in tremor_features:
-            peak_rate = tremor_features['magnitude_peaks_rt']
+        if 'Magnitude_peaks_rt' in tremor_features:
+            peak_rate = tremor_features['Magnitude_peaks_rt']
             if peak_rate > 0.01:  # Very low threshold
                 boost += min(0.05, peak_rate)  # Increased
                 logger.info(f"📍 Peak rate boost: {peak_rate:.3f} -> +{min(0.05, peak_rate):.3f}")

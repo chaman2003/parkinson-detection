@@ -9,6 +9,7 @@ import logging
 from scipy import signal
 from concurrent.futures import ThreadPoolExecutor
 import warnings
+import gc  # For explicit memory cleanup
 
 warnings.filterwarnings('ignore')
 logger = logging.getLogger(__name__)
@@ -70,10 +71,25 @@ class OptimizedAudioExtractor:
             features['_silence_detected'] = False
             
             logger.info(f"✓ Fast extraction: {len(features)} features in optimized mode")
+            
+            # Explicitly delete audio array to release memory and file handles
+            del y
+            del sr
+            
+            # Force garbage collection to ensure file handles are released immediately
+            # This is critical on Windows to prevent file locking issues
+            gc.collect()
+            
             return features
             
         except Exception as e:
             logger.error(f"Fast extraction failed: {e}")
+            # Clean up on error too
+            try:
+                del y
+                del sr
+            except:
+                pass
             return self._get_default_features()
     
     def _detect_silence(self, y, sr):

@@ -41,7 +41,7 @@ Write-Host "[3/3] Starting InstaTunnel..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "Set-Location '$rootDir'; Write-Host '========================================' -ForegroundColor Cyan; Write-Host '  InstaTunnel Client' -ForegroundColor Cyan; Write-Host '========================================' -ForegroundColor Cyan; Write-Host ''; Write-Host 'Connecting to InstaTunnel...' -ForegroundColor Yellow; Write-Host 'Subdomain: parkinson-backend' -ForegroundColor Yellow; Write-Host 'Port: 5000' -ForegroundColor Yellow; Write-Host ''; instatunnel connect 5000 --subdomain parkinson-backend"
+    "Set-Location '$rootDir'; Write-Host '========================================' -ForegroundColor Cyan; Write-Host '  InstaTunnel Client' -ForegroundColor Cyan; Write-Host '========================================' -ForegroundColor Cyan; Write-Host ''; Write-Host 'Connecting to InstaTunnel...' -ForegroundColor Yellow; Write-Host 'Subdomain: parkinsons-disease' -ForegroundColor Yellow; Write-Host 'Port: 5000' -ForegroundColor Yellow; Write-Host ''; instatunnel connect 5000 --subdomain parkinsons-disease"
 )
 
 Write-Host "      InstaTunnel starting in new terminal..." -ForegroundColor Green
@@ -55,7 +55,7 @@ Write-Host "Testing connection..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "Set-Location '$rootDir'; Write-Host '========================================' -ForegroundColor Cyan; Write-Host '  Connection Test' -ForegroundColor Cyan; Write-Host '========================================' -ForegroundColor Cyan; Write-Host ''; Write-Host 'Testing: https://parkinson-backend.instatunnel.my/api/health' -ForegroundColor Yellow; Write-Host ''; Start-Sleep -Seconds 2; curl https://parkinson-backend.instatunnel.my/api/health; Write-Host ''; Write-Host '========================================' -ForegroundColor Green; Write-Host 'If you see status:healthy above, SUCCESS!' -ForegroundColor Green; Write-Host '========================================' -ForegroundColor Green; Write-Host ''; Write-Host 'Press any key to close this window...' -ForegroundColor Yellow; Read-Host"
+    "Set-Location '$rootDir'; Write-Host '========================================' -ForegroundColor Cyan; Write-Host '  Connection Test' -ForegroundColor Cyan; Write-Host '========================================' -ForegroundColor Cyan; Write-Host ''; Write-Host 'Testing: https://parkinsons-disease.instatunnel.my/api/health' -ForegroundColor Yellow; Write-Host ''; Start-Sleep -Seconds 2; curl https://parkinsons-disease.instatunnel.my/api/health; Write-Host ''; Write-Host '========================================' -ForegroundColor Green; Write-Host 'If you see status:healthy above, SUCCESS!' -ForegroundColor Green; Write-Host '========================================' -ForegroundColor Green; Write-Host ''; Write-Host 'Press any key to close this window...' -ForegroundColor Yellow; Read-Host"
 )
 
 Write-Host ""
@@ -69,7 +69,7 @@ Write-Host "  2. InstaTunnel Client (connecting tunnel)" -ForegroundColor White
 Write-Host "  3. Connection Test (testing health endpoint)" -ForegroundColor White
 Write-Host ""
 Write-Host "Your tunnel URL:" -ForegroundColor Cyan
-Write-Host "  https://parkinson-backend.instatunnel.my" -ForegroundColor Yellow
+Write-Host "  https://parkinsons-disease.instatunnel.my" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Check terminal #3 for health check result" -ForegroundColor White

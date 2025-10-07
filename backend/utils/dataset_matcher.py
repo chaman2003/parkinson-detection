@@ -6,8 +6,13 @@ Compares incoming samples with known dataset samples to identify matches
 import numpy as np
 import pickle
 import os
+import sys
 from scipy.spatial.distance import cosine, euclidean
 import logging
+
+# Add parent directory to path for feature_mapper import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from feature_mapper import map_features_to_training_format, features_dict_to_array
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +107,7 @@ class DatasetMatcher:
         Find if tremor sample matches any dataset sample
         
         Args:
-            features_vector: Feature vector to match
+            features_vector: Feature vector to match (must be 25 features)
             threshold: Similarity threshold (0-1, higher = more strict)
         
         Returns:
@@ -112,6 +117,15 @@ class DatasetMatcher:
             return None
         
         try:
+            # Validate feature vector size
+            if len(features_vector) != 25:
+                logger.error(f"Feature vector has {len(features_vector)} features, expected 25")
+                return {
+                    'matched': False,
+                    'best_similarity': 0.0,
+                    'message': f'Invalid feature count: {len(features_vector)} (expected 25)'
+                }
+            
             # Check if dataframe key exists, if not use features array format
             if 'dataframe' in self.tremor_mapping:
                 df = self.tremor_mapping['dataframe']
@@ -125,6 +139,15 @@ class DatasetMatcher:
             else:
                 logger.error("Tremor mapping has invalid format (no 'dataframe' or 'features' key)")
                 return None
+            
+            # Ensure dataset features also have 25 features
+            if dataset_features.shape[1] != 25:
+                logger.error(f"Dataset features have {dataset_features.shape[1]} features, expected 25")
+                return {
+                    'matched': False,
+                    'best_similarity': 0.0,
+                    'message': f'Dataset feature mismatch: {dataset_features.shape[1]} (expected 25)'
+                }
             
             # Normalize vectors for comparison
             features_norm = features_vector / (np.linalg.norm(features_vector) + 1e-10)

@@ -331,7 +331,7 @@ docker run -p 5000:5000 -p 8000:8000 parkinson-detection
 .\run-instatunnel.ps1
 ```
 
-**Your Active Tunnel:** `https://parkinson-backend.instatunnel.my`
+**Your Active Tunnel:** `https://parkinsons-backend.instatunnel.my`
 
 **Advantages:**
 - ✅ Persistent URL (doesn't change on restart)
@@ -404,7 +404,7 @@ Notes:
 
 #### Option B — InstaTunnel (Persistent subdomain; recommended for demos)
 
-InstaTunnel provides a persistent custom subdomain (`parkinson-backend.instatunnel.my`). This is helpful for continuous demos or when you don't want the tunnel URL to change.
+InstaTunnel provides a persistent custom subdomain (`parkinsons-backend.instatunnel.my`). This is helpful for continuous demos or when you don't want the tunnel URL to change.
 
 1. Make sure the InstaTunnel client is installed and available on your PATH.
 2. Start your backend locally (from `backend/`):
@@ -426,7 +426,7 @@ InstaTunnel provides a persistent custom subdomain (`parkinson-backend.instatunn
 ```
 http://localhost:5000/api
 
-5. Use `https://parkinson-backend.instatunnel.my` as your `BACKEND_URL` in the frontend or in Vercel environment variables.
+5. Use `https://parkinsons-backend.instatunnel.my` as your `BACKEND_URL` in the frontend or in Vercel environment variables.
 
 Important notes about InstaTunnel and CORS:
 - Some proxies (including InstaTunnel) add CORS headers. If you modified the backend to also add CORS headers, you may end up with duplicate values (e.g. `*, *`). We recommend using the included `backend.ps1` / `run.ps1` scripts which already handle the recommended configuration.
@@ -443,7 +443,7 @@ This is useful when you want a production-like frontend (on Vercel) to talk to y
 3. In the Vercel dashboard set an environment variable:
 
 - Name: `BACKEND_URL`
-- Value: `https://<your-tunnel-domain>` (e.g. `https://parkinson-backend.instatunnel.my` or `https://abcd1234.ngrok.io`)
+- Value: `https://<your-tunnel-domain>` (e.g. `https://parkinsons-backend.instatunnel.my` or `https://abcd1234.ngrok.io`)
 
 4. Redeploy the Vercel project (or trigger a redeploy) so the frontend uses the new `BACKEND_URL`.
 

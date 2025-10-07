@@ -11,6 +11,7 @@ import logging
 import time
 from queue import Queue
 import threading
+import gc  # For garbage collection to release file handles and resources
 
 # Change to the directory where this script is located
 # This ensures all relative paths work correctly regardless of where the script is run from
@@ -541,7 +542,26 @@ def analyze_data_stream():
                         tremor_features=tremor_features_vector
                     )
                     results['dataset_match'] = dataset_match
-                    logger.info(f"Dataset matching results: {dataset_match}")
+                    
+                    # Log useful information about dataset matching
+                    if dataset_match.get('overall_match'):
+                        consensus = dataset_match.get('consensus_category', 'Unknown')
+                        logger.info(f"✓ Dataset Match Found: {consensus}")
+                        if dataset_match.get('voice_match', {}).get('matched'):
+                            similarity = dataset_match['voice_match'].get('similarity', 0)
+                            logger.info(f"  - Voice: {similarity:.1%} similar to known sample")
+                        if dataset_match.get('tremor_match', {}).get('matched'):
+                            similarity = dataset_match['tremor_match'].get('similarity', 0)
+                            logger.info(f"  - Tremor: {similarity:.1%} similar to known sample")
+                    else:
+                        logger.info("✓ New/Unique Sample: No match in training dataset (this is normal for new patients)")
+                        # Show best similarities even when not matched
+                        voice_sim = dataset_match.get('voice_match', {}).get('best_similarity', 0) if dataset_match.get('voice_match') else 0
+                        tremor_sim = dataset_match.get('tremor_match', {}).get('best_similarity', 0) if dataset_match.get('tremor_match') else 0
+                        if voice_sim > 0:
+                            logger.info(f"  - Voice similarity: {voice_sim:.1%} (threshold: 95%)")
+                        if tremor_sim > 0:
+                            logger.info(f"  - Tremor similarity: {tremor_sim:.1%} (threshold: 95%)")
                 else:
                     logger.warning("No feature vectors available for dataset matching")
                     results['dataset_match'] = {'error': 'No features available for matching'}
@@ -613,6 +633,11 @@ def analyze_data_stream():
                     logger.info(f"Cleaned up audio file: {audio_path}")
             except Exception as cleanup_error:
                 logger.warning(f"Failed to cleanup audio file: {cleanup_error}")
+            
+            # Force garbage collection to release file handles and memory
+            # This is critical on Windows to release locked files
+            gc.collect()
+            logger.info("Garbage collection completed - resources released")
                 
         except Exception as e:
             import traceback
@@ -620,6 +645,14 @@ def analyze_data_stream():
             logger.error(f"Error in streaming analysis: {str(e)}")
             logger.error(f"Traceback: {error_details}")
             yield f"data: {json.dumps({'error': f'Analysis failed: {str(e)}', 'details': 'Check server logs for more information'})}\n\n"
+            
+            # Clean up on error as well
+            try:
+                if 'audio_path' in locals() and audio_path and os.path.exists(audio_path):
+                    os.remove(audio_path)
+            except:
+                pass
+            gc.collect()  # Force cleanup even on error
     
     response = Response(stream_with_context(generate()), mimetype='text/event-stream', headers={
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -833,8 +866,13 @@ def analyze_data():
         # Clean up temporary file (after storage)
         try:
             os.remove(audio_path)
+            logger.info(f"Cleaned up audio file: {audio_path}")
         except OSError:
             logger.warning(f"Could not remove temporary file: {audio_path}")
+        
+        # Force garbage collection to release file handles and memory
+        gc.collect()
+        logger.info("Garbage collection completed - resources released")
 
         # Make results JSON serializable (convert numpy arrays to lists)
         json_safe_results = make_json_serializable(results)
@@ -844,6 +882,13 @@ def analyze_data():
 
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}")
+        # Clean up on error
+        try:
+            if 'audio_path' in locals() and audio_path and os.path.exists(audio_path):
+                os.remove(audio_path)
+        except:
+            pass
+        gc.collect()  # Force cleanup even on error
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/models/info', methods=['GET'])
