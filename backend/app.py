@@ -58,20 +58,16 @@ def make_json_serializable(obj):
 def convert_webm_to_wav(webm_path, wav_path):
     """
     Convert WebM audio file to WAV format using available tools
+    Prioritizes ffmpeg for Python 3.13+ compatibility
     Returns True if successful, False otherwise
     """
-    try:
-        # Try method 1: pydub with ffmpeg
-        from pydub import AudioSegment
-        audio = AudioSegment.from_file(webm_path, format="webm")
-        audio.export(wav_path, format="wav", parameters=["-ar", "22050"])
-        return True
-    except Exception as e:
-        logger.warning(f"pydub conversion failed: {str(e)}")
-        
+    import subprocess
+    import sys
+    
+    # For Python 3.13+, use ffmpeg directly first (avoids aifc/audioop issues)
+    if sys.version_info >= (3, 13):
         try:
-            # Try method 2: Use subprocess with ffmpeg if available
-            import subprocess
+            # Method 1 (Preferred for Python 3.13+): Direct ffmpeg
             result = subprocess.run(
                 ['ffmpeg', '-y', '-i', webm_path, '-acodec', 'pcm_s16le', '-ar', '22050', wav_path],
                 capture_output=True,
@@ -79,23 +75,55 @@ def convert_webm_to_wav(webm_path, wav_path):
                 timeout=30
             )
             if result.returncode == 0:
+                logger.info("✓ Converted WebM to WAV using ffmpeg")
                 return True
             else:
                 logger.warning(f"ffmpeg conversion failed: {result.stderr}")
         except FileNotFoundError:
-            logger.warning("ffmpeg not found in system PATH")
+            logger.warning("ffmpeg not found in system PATH - please install ffmpeg")
         except Exception as e:
             logger.warning(f"ffmpeg conversion error: {str(e)}")
+    
+    # Try pydub (works better on Python < 3.13)
+    try:
+        from pydub import AudioSegment
+        audio = AudioSegment.from_file(webm_path, format="webm")
+        audio.export(wav_path, format="wav", parameters=["-ar", "22050"])
+        logger.info("✓ Converted WebM to WAV using pydub")
+        return True
+    except Exception as e:
+        logger.warning(f"pydub conversion failed: {str(e)}")
         
+        # If pydub failed and we didn't try ffmpeg yet, try it now
+        if sys.version_info < (3, 13):
+            try:
+                result = subprocess.run(
+                    ['ffmpeg', '-y', '-i', webm_path, '-acodec', 'pcm_s16le', '-ar', '22050', wav_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode == 0:
+                    logger.info("✓ Converted WebM to WAV using ffmpeg")
+                    return True
+                else:
+                    logger.warning(f"ffmpeg conversion failed: {result.stderr}")
+            except FileNotFoundError:
+                logger.warning("ffmpeg not found in system PATH")
+            except Exception as e:
+                logger.warning(f"ffmpeg conversion error: {str(e)}")
+        
+        # Last resort: Try librosa/soundfile
         try:
-            # Try method 3: Direct librosa load with audioread (may work with some WebM files)
             import soundfile as sf
             y, sr = librosa.load(webm_path, sr=22050)
             sf.write(wav_path, y, sr)
+            logger.info("✓ Converted WebM to WAV using librosa/soundfile")
             return True
         except Exception as e:
             logger.warning(f"librosa/soundfile conversion failed: {str(e)}")
     
+    logger.error("✗ All conversion methods failed - please install ffmpeg")
     return False
 
 app = Flask(__name__)

@@ -28,6 +28,10 @@ resampy>=0.4.2             # Audio resampling for librosa
 pydub>=0.25.1              # WebM to WAV conversion
 # Note: pydub requires ffmpeg to be installed on system
 
+# Python 3.13 Compatibility (aifc and audioop were removed in Python 3.13)
+pyaudioop-lts>=0.2.2       # Provides audioop for Python 3.13+
+# Note: Install this if you're using Python 3.13 or newer
+
 # Fast Compilation (Required by librosa)
 numba>=0.62.1
 llvmlite>=0.45.0
