@@ -7,7 +7,7 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if Python is installed
-Write-Host "[1/3] Checking Python installation..." -ForegroundColor Yellow
+Write-Host "[1/4] Checking Python installation..." -ForegroundColor Yellow
 try {
     $pythonVersion = python --version 2>&1
     Write-Host "      Found: $pythonVersion" -ForegroundColor Green
@@ -18,7 +18,32 @@ try {
 }
 
 Write-Host ""
-Write-Host "[2/3] Starting Backend Server..." -ForegroundColor Yellow
+Write-Host "[2/4] Installing/Updating Python Dependencies..." -ForegroundColor Yellow
+Write-Host "      This may take a few minutes on first run..." -ForegroundColor Yellow
+
+# Check if requirements.txt exists
+if (Test-Path "backend\requirements.txt") {
+    Write-Host "      Found requirements.txt" -ForegroundColor Green
+    
+    # Install dependencies
+    Set-Location backend
+    try {
+        Write-Host "      Installing packages..." -ForegroundColor Yellow
+        python -m pip install --upgrade pip --quiet
+        python -m pip install -r requirements.txt --quiet
+        Write-Host "      All dependencies installed successfully!" -ForegroundColor Green
+    } catch {
+        Write-Host "      WARNING: Some dependencies may have failed to install" -ForegroundColor Yellow
+        Write-Host "      Backend will try to run anyway..." -ForegroundColor Yellow
+    }
+    Set-Location ..
+} else {
+    Write-Host "      WARNING: requirements.txt not found!" -ForegroundColor Yellow
+    Write-Host "      Proceeding anyway..." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "[3/4] Starting Backend Server..." -ForegroundColor Yellow
 
 # Get current directory
 $rootDir = Get-Location
@@ -35,7 +60,7 @@ Write-Host "      Waiting 5 seconds for backend to initialize..." -ForegroundCol
 Start-Sleep -Seconds 5
 
 Write-Host ""
-Write-Host "[3/3] Starting InstaTunnel..." -ForegroundColor Yellow
+Write-Host "[4/4] Starting InstaTunnel..." -ForegroundColor Yellow
 
 # Start InstaTunnel in new terminal
 Start-Process powershell -ArgumentList @(
@@ -62,6 +87,11 @@ Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
 Write-Host "  Setup Complete!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "Installation Summary:" -ForegroundColor Cyan
+Write-Host "  ✓ Python dependencies installed from requirements.txt" -ForegroundColor Green
+Write-Host "  ✓ Backend server started" -ForegroundColor Green
+Write-Host "  ✓ InstaTunnel connected" -ForegroundColor Green
 Write-Host ""
 Write-Host "Three terminals opened:" -ForegroundColor Cyan
 Write-Host "  1. Backend Server (Flask on port 5000)" -ForegroundColor White

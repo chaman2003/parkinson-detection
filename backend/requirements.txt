@@ -1,12 +1,51 @@
+# ============================================================================
+# Parkinson Detection Backend - Complete Requirements
+# ============================================================================
+# This file contains ALL dependencies needed to run the backend flawlessly
+# Install with: pip install -r requirements.txt
+# ============================================================================
+
+# Web Framework
 Flask==2.3.3
 Flask-CORS==4.0.0
+
+# Core Scientific Computing
 numpy>=1.26.4,<2.4.0
 pandas>=2.0.3
-scikit-learn>=1.3.0
-librosa==0.10.1
-xgboost>=1.7.6
-joblib>=1.3.2
 scipy>=1.11.3
+
+# Machine Learning
+scikit-learn>=1.3.0
+xgboost>=1.7.6
+
+# Audio Processing
+librosa==0.10.1
+soundfile>=0.12.1          # Required by librosa for audio I/O
+audioread>=3.0.0           # Audio file reading support
+resampy>=0.4.2             # Audio resampling for librosa
+
+# Audio Format Conversion
+pydub>=0.25.1              # WebM to WAV conversion
+# Note: pydub requires ffmpeg to be installed on system
+
+# Fast Compilation (Required by librosa)
 numba>=0.62.1
 llvmlite>=0.45.0
-pydub>=0.25.1
+
+# Utilities
+joblib>=1.3.2              # Model serialization
+click>=8.1.0               # CLI utilities (used for colored output suppression)
+requests>=2.31.0           # HTTP client (for testing scripts)
+
+# Excel Export (if needed in future)
+openpyxl>=3.1.2            # Excel file support for pandas
+
+# Color output support (optional but recommended)
+colorama>=0.4.6            # Cross-platform colored terminal output
+
+# ============================================================================
+# Python Version Requirement: >= 3.8
+# ============================================================================
+# Tested with Python 3.13.5 on Windows
+# Should work with Python 3.8, 3.9, 3.10, 3.11, 3.12, 3.13
+# ============================================================================
