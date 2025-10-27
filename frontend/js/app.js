@@ -2,6 +2,14 @@
 if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     console.warn('⚠️ ParkinsonDetectionApp already loaded, skipping redeclaration');
 } else {
+    // Helper function to add ngrok headers to fetch requests
+    window.fetchWithNgrokBypass = async (url, options = {}) => {
+        const headers = options.headers || {};
+        headers['ngrok-skip-browser-warning'] = 'true';
+        headers['User-Agent'] = 'ParkinsonDetectionApp';
+        return fetch(url, { ...options, headers });
+    };
+
     // App State Management
     window.ParkinsonDetectionApp = class ParkinsonDetectionApp {
         constructor() {
@@ -168,7 +176,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     // Backend Availability Check - REQUIRED (no fallback)
     async checkBackendAvailability() {
         try {
-            const response = await fetch(`${this.API_BASE_URL}/health`, {
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/health`, {
                 method: 'GET',
                 timeout: 5000
             });
@@ -1050,7 +1058,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
 
             // Use EventSource for Server-Sent Events
             // Note: EventSource doesn't support POST, so we'll use fetch with streaming
-            const response = await fetch(`${this.API_BASE_URL}/analyze-stream`, {
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/analyze-stream`, {
                 method: 'POST',
                 body: formData
             });

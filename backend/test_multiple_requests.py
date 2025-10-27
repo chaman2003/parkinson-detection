@@ -11,7 +11,7 @@ import time
 import os
 
 # Configuration
-BASE_URL = "https://parkinsons-disease.instatunnel.my/api"
+BASE_URL = "https://ostensible-unvibrant-clarisa.ngrok-free.dev/api"
 TEST_ITERATIONS = 3  # Number of consecutive tests to run
 
 def create_test_audio():

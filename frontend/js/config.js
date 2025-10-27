@@ -9,9 +9,9 @@ const AppConfig = {
      * 
      * For Vercel deployment:
      *   - Reads from BACKEND_URL environment variable
-     *   - Should be set to: https://freezingly-nonsignificative-edison.ngrok-free.dev
+     *   - Should be set to: https://ostensible-unvibrant-clarisa.ngrok-free.dev
      * 
-     * For local development (run.ps1):
+     * For local development (run-locally.ps1):
      *   - Uses relative path '/api' which is proxied by server.py to localhost:5000
      */
     getBackendUrl() {
@@ -22,9 +22,7 @@ const AppConfig = {
 
         // Check if we're running locally (localhost or 127.0.0.1)
         const hostname = window.location.hostname;
-        const isLocal = hostname === 'localhost' || 
-                       hostname === '127.0.0.1' || 
-                       hostname.includes('ngrok');
+        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
 
         if (isLocal) {
             // Local development: use proxy path
@@ -32,18 +30,18 @@ const AppConfig = {
             console.log('🏠 Local development mode detected');
             return '/api';
         } else {
-            // Production (Vercel): use environment variable + /api path
+            // Production (Vercel or ngrok): use environment variable + /api path
             // Vercel will inject BACKEND_URL as a global variable
             const backendUrl = window.BACKEND_URL || 
                              (typeof process !== 'undefined' && process.env?.BACKEND_URL);
             
             if (backendUrl) {
-                console.log('🚀 Production mode: Using configured backend URL');
+                console.log('🚀 Production mode: Using configured backend URL:', backendUrl);
                 // Add /api to the backend URL for production
                 return backendUrl + '/api';
             } else {
-                console.error('⚠️ BACKEND_URL not configured in Vercel environment variables!');
-                console.error('Please add BACKEND_URL environment variable in Vercel dashboard');
+                console.error('⚠️ BACKEND_URL not configured!');
+                console.error('Please set BACKEND_URL to: https://ostensible-unvibrant-clarisa.ngrok-free.dev');
                 // Fallback to relative path (will likely fail in production)
                 return '/api';
             }
