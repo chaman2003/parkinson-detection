@@ -61,7 +61,7 @@ Write-Host ""
 Write-Host "Starting ngrok Tunnel..." -ForegroundColor Cyan
 $ngrokPath = Join-Path $scriptDir "ngrok.exe"
 if (Test-Path $ngrokPath) {
-    $ngrokCmd = "Set-Location '$scriptDir'; Write-Host 'ngrok Starting...' -ForegroundColor Green; .\ngrok.exe http 8000"
+    $ngrokCmd = "Set-Location '$scriptDir'; Write-Host 'ngrok Starting with custom domain...' -ForegroundColor Green; .\ngrok.exe http --domain=ostensible-unvibrant-clarisa.ngrok-free.dev 8000"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $ngrokCmd -WindowStyle Normal
     Write-Host "  Waiting for ngrok..." -ForegroundColor Yellow
     Start-Sleep -Seconds 10
@@ -86,12 +86,12 @@ try {
     Write-Host "===============================================================================" -ForegroundColor Green
     Write-Host ""
     Write-Host "SMARTPHONE ACCESS:" -ForegroundColor Cyan
-    Write-Host "  Open this URL on your phone: $publicUrl" -ForegroundColor Yellow
+    Write-Host "  Open this URL on your phone: https://ostensible-unvibrant-clarisa.ngrok-free.dev" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "SERVICES:" -ForegroundColor Cyan
     Write-Host "  Backend:  http://localhost:5000" -ForegroundColor White
     Write-Host "  Frontend: http://localhost:8000" -ForegroundColor White
-    Write-Host "  Mobile:   $publicUrl" -ForegroundColor Yellow
+    Write-Host "  Mobile:   https://ostensible-unvibrant-clarisa.ngrok-free.dev" -ForegroundColor Yellow
     Write-Host "  Dashboard: http://127.0.0.1:4040" -ForegroundColor White
     Write-Host ""
     Write-Host "FEATURES ENABLED:" -ForegroundColor Cyan

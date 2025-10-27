@@ -17,7 +17,7 @@ const backendUrl = process.env.BACKEND_URL;
 if (!backendUrl) {
     console.error('❌ ERROR: BACKEND_URL environment variable is not set!');
     console.error('Please add BACKEND_URL in Vercel project settings.');
-    console.error('Example: https://freezingly-nonsignificative-edison.ngrok-free.dev');
+    console.error('Example: https://ostensible-unvibrant-clarisa.ngrok-free.dev');
     process.exit(1);
 }
 

@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, Response, stream_with_context
-# flask_cors removed - manual CORS handling to prevent duplicate headers with InstaTunnel
+# CORS headers are handled by ngrok tunnel - no need for flask_cors
 import os
 import sys
 import json
@@ -133,11 +133,9 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 app.config['THREADED'] = True  # Enable threading for concurrent requests
 
-# CORS disabled - InstaTunnel proxy adds all necessary CORS headers automatically
-# No need to add our own, as it causes duplicates (*, * instead of *)
-# InstaTunnel adds: Access-Control-Allow-Origin: *
-#                   Access-Control-Allow-Methods: POST, OPTIONS, GET, PUT, DELETE
-#                   Access-Control-Allow-Headers: Content-Type, Authorization, etc.
+# CORS headers are handled by ngrok proxy
+# ngrok automatically forwards and manages all CORS headers
+# No need for flask_cors as it can cause duplicate headers
 
 # Initialize utilities
 try:
@@ -309,6 +307,14 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, ngrok-skip-browser-warning'
+    return response
 
 @app.route('/', methods=['GET'])
 def root():
@@ -987,7 +993,7 @@ def not_found(e):
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
-# OPTIONS preflight handled by InstaTunnel proxy - no need for manual handler
+# OPTIONS preflight handled by ngrok proxy - no need for manual handler
 
 if __name__ == '__main__':
     print("\n" + "="*70)
