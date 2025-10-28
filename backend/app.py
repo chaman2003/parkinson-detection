@@ -1,20 +1,17 @@
 from flask import Flask, request, jsonify, Response, stream_with_context
-# CORS headers are handled by ngrok tunnel - no need for flask_cors
 import os
 import sys
 import json
 import numpy as np
-import librosa
 import pickle
 from datetime import datetime
 import logging
 import time
 from queue import Queue
 import threading
-import gc  # For garbage collection to release file handles and resources
+import gc
 
 # Change to the directory where this script is located
-# This ensures all relative paths work correctly regardless of where the script is run from
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
@@ -22,7 +19,7 @@ os.chdir(script_dir)
 from utils.ml_models import ParkinsonMLPipeline
 from utils.data_loader import DatasetLoader, load_single_voice_file
 from utils.data_storage import DataStorageManager
-from utils.audio_features_optimized import OptimizedAudioExtractor
+from utils.audio_features_scipy import OptimizedAudioExtractor
 from utils.tremor_features_optimized import OptimizedTremorExtractor
 from utils.dataset_matcher import DatasetMatcher
 
@@ -113,15 +110,20 @@ def convert_webm_to_wav(webm_path, wav_path):
             except Exception as e:
                 logger.warning(f"ffmpeg conversion error: {str(e)}")
         
-        # Last resort: Try librosa/soundfile
+        # Last resort: Try soundfile with scipy resampling
         try:
             import soundfile as sf
-            y, sr = librosa.load(webm_path, sr=22050)
-            sf.write(wav_path, y, sr)
-            logger.info("✓ Converted WebM to WAV using librosa/soundfile")
+            y, sr = sf.read(webm_path, dtype='float32')
+            # Resample to 22050 Hz if needed
+            if sr != 22050:
+                num_samples = int(len(y) * 22050 / sr)
+                indices = np.linspace(0, len(y) - 1, num_samples)
+                y = np.interp(indices, np.arange(len(y)), y)
+            sf.write(wav_path, y, 22050)
+            logger.info("Converted WebM to WAV using soundfile/scipy")
             return True
         except Exception as e:
-            logger.warning(f"librosa/soundfile conversion failed: {str(e)}")
+            logger.warning(f"soundfile/scipy conversion failed: {str(e)}")
     
     logger.error("✗ All conversion methods failed - please install ffmpeg")
     return False

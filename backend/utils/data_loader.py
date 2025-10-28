@@ -7,7 +7,14 @@ Loads tremor data from parkinson_tremor_dataset.csv
 import os
 import numpy as np
 import pandas as pd
-import librosa
+# Try to import librosa, fall back to scipy for Python 3.14 compat
+try:
+    import librosa
+    LIBROSA_AVAILABLE = True
+except ImportError:
+    LIBROSA_AVAILABLE = False
+    print("  librosa not available, using scipy for audio processing")
+    import soundfile as sf
 from pathlib import Path
 import logging
 
@@ -111,9 +118,22 @@ class DatasetLoader:
 
 
 def load_single_voice_file(file_path, target_sr=22050):
-    """Load a single voice file and return audio data"""
+    """Load a single voice file and return audio data using scipy/numpy"""
     try:
-        y, sr = librosa.load(file_path, sr=target_sr)
+        import soundfile as sf
+        y, sr = sf.read(file_path, dtype='float32')
+        
+        # Resample if needed
+        if sr != target_sr:
+            num_samples = int(len(y) * target_sr / sr)
+            indices = np.linspace(0, len(y) - 1, num_samples)
+            y = np.interp(indices, np.arange(len(y)), y)
+            sr = target_sr
+        
+        # Convert to mono if stereo
+        if len(y.shape) > 1:
+            y = np.mean(y, axis=1)
+        
         return y, sr
     except Exception as e:
         logger.error(f"Error loading {file_path}: {e}")
