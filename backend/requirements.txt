@@ -28,13 +28,9 @@ resampy>=0.4.2             # Audio resampling for librosa
 pydub>=0.25.1              # WebM to WAV conversion
 # Note: pydub requires ffmpeg to be installed on system
 
-# Python 3.13 Compatibility (aifc and audioop were removed in Python 3.13)
-pyaudioop-lts>=0.2.2       # Provides audioop for Python 3.13+
-# Note: Install this if you're using Python 3.13 or newer
-
-# Fast Compilation (Required by librosa)
-numba>=0.62.1
-llvmlite>=0.45.0
+# Fast Compilation (Optional - librosa works fine without it)
+# Removed numba because it doesn't support Python 3.14 yet
+# llvmlite is a dependency of numba, so also removed
 
 # Utilities
 joblib>=1.3.2              # Model serialization
@@ -48,8 +44,9 @@ openpyxl>=3.1.2            # Excel file support for pandas
 colorama>=0.4.6            # Cross-platform colored terminal output
 
 # ============================================================================
-# Python Version Requirement: >= 3.8
+# Python Version Requirement: >= 3.10, < 3.14
 # ============================================================================
-# Tested with Python 3.13.5 on Windows
-# Should work with Python 3.8, 3.9, 3.10, 3.11, 3.12, 3.13
+# Recommended: Python 3.13.5 (latest stable version fully supported)
+# Note: Python 3.14 is not yet fully supported by numba and other packages
+# Tested with Python 3.10, 3.11, 3.12, 3.13 on Windows and Linux
 # ============================================================================
