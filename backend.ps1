@@ -1,6 +1,5 @@
 # Parkinson Detection - Backend & ngrok Only
 # Starts backend server and ngrok tunnel (no frontend proxy)
-# Uses virtual environment created by install.ps1
 
 Write-Host "===============================================================================" -ForegroundColor Cyan
 Write-Host "  PARKINSON DETECTION - BACKEND & NGROK" -ForegroundColor Green
@@ -8,26 +7,6 @@ Write-Host "====================================================================
 Write-Host ""
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$venvDir = Join-Path $scriptDir "venv"
-$venvActivate = Join-Path $venvDir "Scripts\Activate.ps1"
-
-# Check if venv exists
-if (-not (Test-Path $venvActivate)) {
-    Write-Host "[ERROR] Virtual environment not found!" -ForegroundColor Red
-    Write-Host "Please run install.ps1 first to create the virtual environment" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Command: .\install.ps1" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit 1
-}
-
-# Activate virtual environment
-Write-Host "[ENV] Activating virtual environment..." -ForegroundColor Cyan
-. $venvActivate
-Write-Host "[OK] Virtual environment activated" -ForegroundColor Green
-Write-Host ""
 
 # Stop existing processes
 Write-Host "Cleaning up existing processes..." -ForegroundColor Yellow
@@ -48,7 +27,7 @@ Write-Host ""
 Write-Host "Starting Backend Server (Port 5000)..." -ForegroundColor Cyan
 $backendPath = Join-Path $scriptDir "backend"
 if (Test-Path $backendPath) {
-    $backendCmd = ". '$venvActivate'; Set-Location '$backendPath'; Write-Host 'Backend Starting...' -ForegroundColor Green; python app.py"
+    $backendCmd = "Set-Location '$backendPath'; Write-Host 'Backend Starting...' -ForegroundColor Green; python app.py"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
     Start-Sleep -Seconds 8
     Write-Host "  Backend started" -ForegroundColor Green

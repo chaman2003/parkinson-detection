@@ -5,12 +5,10 @@ Write-Host ""
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ErrorActionPreference = "Continue"
-$venvDir = Join-Path $scriptDir "venv"
 
 # Track installation status
 $installationSteps = @{
     "Python Check" = $false
-    "Virtual Environment" = $false
     "Python Dependencies" = $false
     "Node.js (Optional)" = $false
     "ngrok Download" = $false
@@ -40,39 +38,10 @@ try {
     exit 1
 }
 
-# Step 2: Create Virtual Environment
-Print-Step "Creating Virtual Environment" 2 7
+# Step 2: Install Python Dependencies
+Print-Step "Installing Python Dependencies" 2 6
 
-if (Test-Path $venvDir) {
-    Write-Host "[OK] Virtual environment already exists at: $venvDir" -ForegroundColor Green
-    $installationSteps["Virtual Environment"] = $true
-} else {
-    Write-Host "[ENV] Creating virtual environment..." -ForegroundColor Cyan
-    python -m venv $venvDir
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Virtual environment created successfully" -ForegroundColor Green
-        $installationSteps["Virtual Environment"] = $true
-    } else {
-        Write-Host "[ERROR] Failed to create virtual environment" -ForegroundColor Red
-        exit 1
-    }
-}
-
-# Activate virtual environment
-$venvActivate = Join-Path $venvDir "Scripts\Activate.ps1"
-if (Test-Path $venvActivate) {
-    Write-Host "[ENV] Activating virtual environment..." -ForegroundColor Cyan
-    . $venvActivate
-    Write-Host "[OK] Virtual environment activated" -ForegroundColor Green
-} else {
-    Write-Host "[ERROR] Could not find activation script" -ForegroundColor Red
-    exit 1
-}
-
-# Step 3: Install Python Dependencies
-Print-Step "Installing Python Dependencies" 3 7
-
-Write-Host "[PKG] Upgrading pip in venv..." -ForegroundColor Cyan
+Write-Host "[PKG] Upgrading pip..." -ForegroundColor Cyan
 python -m pip install --upgrade pip -q
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[OK] pip upgraded successfully" -ForegroundColor Green
@@ -94,8 +63,8 @@ if (Test-Path $backendReqs) {
     exit 1
 }
 
-# Step 4: Check Node.js (Optional)
-Print-Step "Checking Node.js (Optional)" 4 7
+# Step 3: Check Node.js (Optional)
+Print-Step "Checking Node.js (Optional)" 3 6
 
 try {
     $nodeVersion = node --version 2>&1
@@ -107,8 +76,8 @@ try {
     $installationSteps["Node.js (Optional)"] = $true
 }
 
-# Step 5: Download ngrok
-Print-Step "Setting Up ngrok Tunnel" 5 7
+# Step 4: Download ngrok
+Print-Step "Setting Up ngrok Tunnel" 4 6
 
 $ngrokPath = Join-Path $scriptDir "ngrok.exe"
 
@@ -141,8 +110,8 @@ if (Test-Path $ngrokPath) {
     }
 }
 
-# Step 6: Project Structure Setup
-Print-Step "Setting Up Project Structure" 6 7
+# Step 5: Project Structure Setup
+Print-Step "Setting Up Project Structure" 5 6
 
 Write-Host "[DIR] Checking project directories..." -ForegroundColor Cyan
 
@@ -173,8 +142,8 @@ foreach ($dir in $requiredDirs) {
 Write-Host "[OK] Project structure ready" -ForegroundColor Green
 $installationSteps["Project Setup"] = $true
 
-# Step 7: ML Models Setup
-Print-Step "ML Models Training Setup" 7 7
+# Step 6: ML Models Setup
+Print-Step "ML Models Training Setup" 6 6
 
 $modelsDir = Join-Path $scriptDir "backend\models"
 $voiceModel = Join-Path $modelsDir "voice_model.pkl"
@@ -219,9 +188,6 @@ if ($completedSteps -eq $totalSteps) {
     Write-Host ""
     Write-Host "[READY] Ready to start the application!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Virtual environment location:" -ForegroundColor Cyan
-    Write-Host "  $venvDir" -ForegroundColor Yellow
-    Write-Host ""
     Write-Host "To run the application, choose one:" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  1. Full Setup (Backend + Frontend + ngrok):" -ForegroundColor White
@@ -230,9 +196,9 @@ if ($completedSteps -eq $totalSteps) {
     Write-Host "  2. Backend Only (with ngrok):" -ForegroundColor White
     Write-Host "     .\backend.ps1" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  3. Manual Startup (with venv activation):" -ForegroundColor White
-    Write-Host "     .\venv\Scripts\Activate.ps1" -ForegroundColor Yellow
-    Write-Host "     cd backend; python app.py" -ForegroundColor Yellow
+    Write-Host "  3. Manual Startup:" -ForegroundColor White
+    Write-Host "     cd backend && python app.py" -ForegroundColor Yellow
+    Write-Host "     (in another terminal) cd frontend && python server.py 8000" -ForegroundColor Yellow
     Write-Host ""
 } else {
     Write-Host ""

@@ -1,6 +1,5 @@
 # Parkinson Detection - Mobile App Startup Script
 # Starts backend, frontend proxy, and ngrok for smartphone access
-# Uses virtual environment created by install.ps1
 
 Write-Host "===============================================================================" -ForegroundColor Cyan
 Write-Host "  PARKINSON DETECTION - MOBILE SETUP" -ForegroundColor Green
@@ -8,20 +7,6 @@ Write-Host "====================================================================
 Write-Host ""
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$venvDir = Join-Path $scriptDir "venv"
-$venvActivate = Join-Path $venvDir "Scripts\Activate.ps1"
-
-# Check if venv exists
-if (-not (Test-Path $venvActivate)) {
-    Write-Host "[ERROR] Virtual environment not found!" -ForegroundColor Red
-    Write-Host "Please run install.ps1 first to create the virtual environment" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Command: .\install.ps1" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit 1
-}
 
 # Stop existing processes
 Write-Host "Cleaning up existing processes..." -ForegroundColor Yellow
@@ -48,7 +33,7 @@ Write-Host ""
 Write-Host "Starting Backend Server (Port 5000)..." -ForegroundColor Cyan
 $backendPath = Join-Path $scriptDir "backend"
 if (Test-Path $backendPath) {
-    $backendCmd = ". '$venvActivate'; Set-Location '$backendPath'; Write-Host 'Backend Starting...' -ForegroundColor Green; python app.py"
+    $backendCmd = "Set-Location '$backendPath'; Write-Host 'Backend Starting...' -ForegroundColor Green; python app.py"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
     Start-Sleep -Seconds 8
     Write-Host "  Backend started" -ForegroundColor Green
@@ -62,7 +47,7 @@ Write-Host ""
 Write-Host "Starting Frontend Proxy Server (Port 8000)..." -ForegroundColor Cyan
 $frontendPath = Join-Path $scriptDir "frontend"
 if (Test-Path $frontendPath) {
-    $frontendCmd = ". '$venvActivate'; Set-Location '$frontendPath'; Write-Host 'Frontend Proxy Starting...' -ForegroundColor Green; python server.py 8000"
+    $frontendCmd = "Set-Location '$frontendPath'; Write-Host 'Frontend Proxy Starting...' -ForegroundColor Green; python server.py 8000"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd -WindowStyle Normal
     Start-Sleep -Seconds 4
     Write-Host "  Frontend proxy started" -ForegroundColor Green
