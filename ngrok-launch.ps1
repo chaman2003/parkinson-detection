@@ -3,4 +3,4 @@
 
 Set-Location "$PSScriptRoot"
 Write-Host "Starting ngrok tunnel..." -ForegroundColor Cyan
-Start-Process -FilePath "ngrok.exe" -ArgumentList "http --url=elease-unmeaning-mireille.ngrok-free.dev 5000" -NoNewWindow -Wait
+Start-Process -FilePath "ngrok.exe" -ArgumentList "http --url=https://elease-unmeaning-mireille.ngrok-free.dev 5000" -NoNewWindow -Wait

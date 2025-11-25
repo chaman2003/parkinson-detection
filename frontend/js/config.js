@@ -9,7 +9,7 @@ const AppConfig = {
      * 
      * For Vercel deployment:
      *   - Reads from BACKEND_URL environment variable
-     *   - Should be set to: elease-unmeaning-mireille.ngrok-free.dev
+     *   - Should be set to: https://elease-unmeaning-mireille.ngrok-free.dev
      * 
      * For local development (run-locally.ps1):
      *   - Uses relative path '/api' which is proxied by server.py to localhost:5000
@@ -41,7 +41,7 @@ const AppConfig = {
                 return backendUrl + '/api';
             } else {
                 console.error('⚠️ BACKEND_URL not configured!');
-                console.error('Please set BACKEND_URL to: elease-unmeaning-mireille.ngrok-free.dev');
+                console.error('Please set BACKEND_URL to: https://elease-unmeaning-mireille.ngrok-free.dev');
                 // Fallback to relative path (will likely fail in production)
                 return '/api';
             }

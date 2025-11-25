@@ -11,7 +11,7 @@ import time
 import os
 
 # Configuration
-BASE_URL = "elease-unmeaning-mireille.ngrok-free.dev/api"
+BASE_URL = "https://elease-unmeaning-mireille.ngrok-free.dev/api"
 TEST_ITERATIONS = 3  # Number of consecutive tests to run
 
 def create_test_audio():

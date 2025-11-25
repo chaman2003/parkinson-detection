@@ -61,7 +61,7 @@ Write-Host ""
 
 Write-Host "SERVICES:" -ForegroundColor Cyan
 Write-Host "  Backend:  http://localhost:5000" -ForegroundColor White
-Write-Host "  API URL:  elease-unmeaning-mireille.ngrok-free.dev" -ForegroundColor Yellow
+Write-Host "  API URL:  https://elease-unmeaning-mireille.ngrok-free.dev" -ForegroundColor Yellow
 Write-Host "  Dashboard: http://127.0.0.1:4040" -ForegroundColor White
 Write-Host ""
 
@@ -71,7 +71,7 @@ Write-Host "  Analyze:  POST http://localhost:5000/api/analyze" -ForegroundColor
 Write-Host ""
 
 Write-Host "MOBILE ACCESS:" -ForegroundColor Cyan
-Write-Host "  URL: elease-unmeaning-mireille.ngrok-free.dev" -ForegroundColor Yellow
+Write-Host "  URL: https://elease-unmeaning-mireille.ngrok-free.dev" -ForegroundColor Yellow
 Write-Host "  Share this URL with your mobile device" -ForegroundColor Gray
 Write-Host ""
 
