@@ -106,11 +106,16 @@ class ParkinsonMLPipeline:
             
             # Create audio vector using ONLY selected features if available
             if self.voice_feature_names:
+                # Keep a copy of ALL features for display purposes
+                all_audio_features = audio_features.copy()
+                
                 audio_vector = self._dict_to_vector_selected(audio_features, self.voice_feature_names)
-                # Filter features for response
-                audio_features = {k: audio_features.get(k, 0.0) for k in self.voice_feature_names}
+                # Filter features for response but keep the full set for raw_features
+                filtered_audio_features = {k: audio_features.get(k, 0.0) for k in self.voice_feature_names}
             else:
                 # Fallback to all features (should not happen if trained correctly)
+                all_audio_features = audio_features.copy()
+                filtered_audio_features = audio_features
                 audio_vector = self._dict_to_vector(audio_features)
             
             # Check if vector is effectively empty/zeros (failed extraction)
@@ -126,6 +131,8 @@ class ParkinsonMLPipeline:
                 voice_pred, voice_conf = self._predict_voice(audio_vector)
         else:
             audio_features = {}
+            all_audio_features = {}
+            filtered_audio_features = {}
             voice_conf = 0.5
             voice_pred = "Unknown"
             audio_vector = None
@@ -221,7 +228,7 @@ class ParkinsonMLPipeline:
             combined_conf = 0.5
             combined_pred = "Not Affected"
         
-        key_features = self._extract_key_features(audio_features, tremor_features)
+        key_features = self._extract_key_features(all_audio_features, tremor_features)
         
         # Generate comprehensive insights
         comprehensive_insights = self._generate_comprehensive_insights(
@@ -237,15 +244,15 @@ class ParkinsonMLPipeline:
             'voice_patterns': round(float(voice_conf) * 100, 2),  # Voice pattern strength 0-100
             'motion_patterns': round(float(tremor_conf) * 100, 2),  # Motion pattern strength 0-100
             'features': key_features,  # Simplified 0-100 scale features for display
-            'raw_features': {**audio_features, **tremor_features},  # All raw features for detailed view
+            'raw_features': {**all_audio_features, **tremor_features},  # All raw features for detailed view
             'tremor_features': tremor_features,  # Explicit tremor features
-            'audio_features': audio_features,  # Explicit audio features
+            'audio_features': all_audio_features,  # Explicit audio features (FULL SET)
             'insights': comprehensive_insights,  # Real-time insights
             'voice_features_vector': audio_vector,
             'tremor_features_vector': tremor_vector,
             'metadata': {
                 'processing_time': round(time.time() - start_time, 2),
-                'audio_features_count': len(audio_features),
+                'audio_features_count': len(all_audio_features),
                 'tremor_features_count': len(tremor_features),
                 'motion_samples': len(motion_data) if motion_data is not None else 0,
                 'model_version': '1.0.0',
