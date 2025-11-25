@@ -113,6 +113,11 @@ class ParkinsonMLPipeline:
                 # Fallback to all features (should not happen if trained correctly)
                 audio_vector = self._dict_to_vector(audio_features)
             
+            # Check if vector is effectively empty/zeros (failed extraction)
+            if np.all(np.abs(audio_vector) < 1e-6):
+                logger.warning("⚠️ Audio vector is all zeros - treating as insufficient data")
+                voice_is_idle = True
+            
             if voice_is_idle:
                 logger.warning(f"🔇 Voice idle/silence detected - returning low confidence")
                 voice_conf = 0.05  # Very low confidence (5%)

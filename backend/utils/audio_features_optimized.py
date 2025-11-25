@@ -42,13 +42,20 @@ class OptimizedAudioExtractor:
                     audio.export(wav_path, format='wav')
                     logger.info(f"WebM conversion successful: {wav_path}")
                 except Exception as conv_err:
-                    logger.warning(f"WebM conversion failed: {conv_err}")
-                    # Try to load the WebM directly with soundfile anyway
+                    logger.warning(f"pydub conversion failed: {conv_err}, trying ffmpeg subprocess")
                     try:
-                        y, sr = sf.read(audio_path, dtype='float32')
-                    except:
-                        logger.error(f"Cannot load WebM file: {audio_path}")
-                        return self._get_default_features()
+                        import subprocess
+                        subprocess.run(['ffmpeg', '-y', '-i', audio_path, '-acodec', 'pcm_s16le', '-ar', '22050', wav_path], 
+                                     check=True, capture_output=True)
+                        logger.info(f"ffmpeg subprocess conversion successful: {wav_path}")
+                    except Exception as sub_err:
+                        logger.warning(f"ffmpeg subprocess failed: {sub_err}")
+                        # Try to load the WebM directly with soundfile anyway
+                        try:
+                            y, sr = sf.read(audio_path, dtype='float32')
+                        except:
+                            logger.error(f"Cannot load WebM file: {audio_path}")
+                            return self._get_default_features()
             
             # Load audio using soundfile (works with WAV, MP3, FLAC, etc.)
             try:
@@ -502,4 +509,9 @@ class OptimizedAudioExtractor:
         # Total: 52 (MFCC) + 28 (Spectral) + 24 (Prosodic) + 18 (Quality) + 8 (Temporal) + 3 (Harmonic) = 133 features
         for i in range(133):
             features[f'feature_{i}'] = 0.0
+            
+        # Add metadata flags to indicate this is a default/empty feature set
+        features['_silence_detected'] = True
+        features['_insights'] = {'audio_quality': 'poor', 'voice_stability': 'unknown'}
+        
         return features

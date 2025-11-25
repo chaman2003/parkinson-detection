@@ -771,6 +771,21 @@ def analyze_data():
         audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
         audio_file.save(audio_path)
 
+        # Convert to WAV immediately for better compatibility
+        wav_filename = f'audio_{timestamp}.wav'
+        wav_path = os.path.join(app.config['UPLOAD_FOLDER'], wav_filename)
+        
+        if convert_webm_to_wav(audio_path, wav_path):
+            logger.info(f"Converted uploaded WebM to WAV: {wav_path}")
+            # If conversion successful, use the WAV file
+            try:
+                os.remove(audio_path)
+            except:
+                pass
+            audio_path = wav_path
+        else:
+            logger.warning("WebM conversion failed in analyze endpoint, proceeding with original file")
+
         # Enhanced logging with detailed progress
         print("\n" + "="*70)
         print("🔬 PARKINSON'S DETECTION - ANALYSIS STARTED")
