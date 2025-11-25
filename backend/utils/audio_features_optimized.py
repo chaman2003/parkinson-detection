@@ -504,14 +504,33 @@ class OptimizedAudioExtractor:
         return features
     
     def _get_default_features(self):
-        """Return default feature dictionary - exactly 133 features to match the model"""
-        features = {}
-        # Total: 52 (MFCC) + 28 (Spectral) + 24 (Prosodic) + 18 (Quality) + 8 (Temporal) + 3 (Harmonic) = 133 features
-        for i in range(133):
-            features[f'feature_{i}'] = 0.0
+        """Return default feature dictionary with CORRECT keys matching extraction"""
+        # Generate dummy features using the actual extraction logic with silent audio
+        # This ensures keys match exactly what extract_features_fast produces
+        try:
+            y = np.zeros(self.sample_rate) # 1 second of silence
+            sr = self.sample_rate
             
-        # Add metadata flags to indicate this is a default/empty feature set
-        features['_silence_detected'] = True
-        features['_insights'] = {'audio_quality': 'poor', 'voice_stability': 'unknown'}
-        
-        return features
+            features = {}
+            features.update(self._extract_mfcc_fast(y, sr))
+            features.update(self._extract_spectral_fast(y, sr))
+            features.update(self._extract_prosodic_fast(y, sr))
+            features.update(self._extract_quality_fast(y, sr))
+            features.update(self._extract_temporal_fast(y, sr))
+            features.update(self._extract_harmonic_fast(y, sr))
+            
+            # Trim to 133 just like in extract_features_fast
+            feature_keys = sorted(features.keys())[:133]
+            default_features = {k: 0.0 for k in feature_keys}
+            
+            # Add metadata flags
+            default_features['_silence_detected'] = True
+            default_features['_insights'] = {'audio_quality': 'poor', 'voice_stability': 'unknown'}
+            
+            return default_features
+        except Exception as e:
+            logger.error(f"Error generating default features: {e}")
+            # Fallback to simple features if generation fails
+            features = {f'feature_{i}': 0.0 for i in range(133)}
+            features['_silence_detected'] = True
+            return features
