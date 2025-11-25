@@ -1014,7 +1014,8 @@ if __name__ == '__main__':
     print("="*70 + "\n")
     
     # Disable reloader to prevent interruption during analysis
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+    # Enable threading to handle multiple requests (essential for streaming + new requests)
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False, threaded=True)
 
 # For Vercel deployment
 application = app

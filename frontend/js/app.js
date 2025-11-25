@@ -130,6 +130,24 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     }
 
     resetTest() {
+        // Ensure any active recording is stopped and resources released
+        if (this.isRecording) {
+            this.stopVoiceRecording();
+            this.stopTremorTest();
+        }
+
+        // Force close audio context if it exists and isn't closed
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            try {
+                this.audioContext.close();
+            } catch (e) {
+                console.warn('Error closing audio context:', e);
+            }
+        }
+        this.audioContext = null;
+        this.mediaRecorder = null;
+        this.audioStream = null;
+
         this.testProgress = 0;
         this.audioData = [];
         this.motionData = [];
@@ -143,14 +161,20 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Reset buttons
         const voiceBtn = document.getElementById('voice-record-btn');
         const tremorBtn = document.getElementById('tremor-record-btn');
-        voiceBtn.textContent = '🎤 Start Recording';
-        voiceBtn.classList.remove('recording');
-        tremorBtn.textContent = '📱 Start Tremor Test';
-        tremorBtn.classList.remove('recording');
+        if (voiceBtn) {
+            voiceBtn.textContent = '🎤 Start Recording';
+            voiceBtn.classList.remove('recording');
+        }
+        if (tremorBtn) {
+            tremorBtn.textContent = '📱 Start Tremor Test';
+            tremorBtn.classList.remove('recording');
+        }
         
         // Clear status messages
-        document.getElementById('voice-status').innerHTML = '';
-        document.getElementById('tremor-status').innerHTML = '';
+        const voiceStatus = document.getElementById('voice-status');
+        const tremorStatus = document.getElementById('tremor-status');
+        if (voiceStatus) voiceStatus.innerHTML = '';
+        if (tremorStatus) tremorStatus.innerHTML = '';
     }
 
     resetTestData() {
@@ -279,6 +303,15 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                     sampleRate: 44100
                 }
             });
+
+            // Ensure previous AudioContext is closed
+            if (this.audioContext && this.audioContext.state !== 'closed') {
+                try {
+                    this.audioContext.close();
+                } catch (e) {
+                    console.warn('Error closing previous audio context:', e);
+                }
+            }
 
             // Enhanced audio setup for maximum accuracy
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1058,7 +1091,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
 
             // Use EventSource for Server-Sent Events
             // Note: EventSource doesn't support POST, so we'll use fetch with streaming
-            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/analyze-stream`, {
+            // Add timestamp to prevent caching
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/analyze-stream?t=${Date.now()}`, {
                 method: 'POST',
                 body: formData
             });
