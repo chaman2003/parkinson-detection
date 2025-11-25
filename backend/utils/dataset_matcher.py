@@ -83,7 +83,15 @@ class DatasetMatcher:
             
             # Check if match is good enough
             if best_similarity >= threshold:
-                category, filename = filenames[best_match_idx]
+                # Get category from labels if available
+                labels = self.voice_mapping.get('labels', [])
+                if best_match_idx < len(labels):
+                    category = 'Parkinsons' if labels[best_match_idx] == 1 else 'Healthy'
+                else:
+                    category = 'Unknown'
+                
+                filename = filenames[best_match_idx]
+                
                 return {
                     'matched': True,
                     'category': category,  # 'Healthy' or 'Parkinsons'
@@ -107,7 +115,7 @@ class DatasetMatcher:
         Find if tremor sample matches any dataset sample
         
         Args:
-            features_vector: Feature vector to match (must be 25 features)
+            features_vector: Feature vector to match (must be 12 features)
             threshold: Similarity threshold (0-1, higher = more strict)
         
         Returns:
@@ -118,12 +126,12 @@ class DatasetMatcher:
         
         try:
             # Validate feature vector size
-            if len(features_vector) != 25:
-                logger.error(f"Feature vector has {len(features_vector)} features, expected 25")
+            if len(features_vector) != 12:
+                logger.error(f"Feature vector has {len(features_vector)} features, expected 12")
                 return {
                     'matched': False,
                     'best_similarity': 0.0,
-                    'message': f'Invalid feature count: {len(features_vector)} (expected 25)'
+                    'message': f'Invalid feature count: {len(features_vector)} (expected 12)'
                 }
             
             # Check if dataframe key exists, if not use features array format
@@ -140,13 +148,13 @@ class DatasetMatcher:
                 logger.error("Tremor mapping has invalid format (no 'dataframe' or 'features' key)")
                 return None
             
-            # Ensure dataset features also have 25 features
-            if dataset_features.shape[1] != 25:
-                logger.error(f"Dataset features have {dataset_features.shape[1]} features, expected 25")
+            # Ensure dataset features also have 12 features
+            if dataset_features.shape[1] != 12:
+                logger.error(f"Dataset features have {dataset_features.shape[1]} features, expected 12")
                 return {
                     'matched': False,
                     'best_similarity': 0.0,
-                    'message': f'Dataset feature mismatch: {dataset_features.shape[1]} (expected 25)'
+                    'message': f'Dataset feature mismatch: {dataset_features.shape[1]} (expected 12)'
                 }
             
             # Normalize vectors for comparison

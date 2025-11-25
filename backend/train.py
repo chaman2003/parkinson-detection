@@ -20,7 +20,9 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.feature_selection import SelectFromModel
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from xgboost import XGBClassifier
 import time
 import sys
 import warnings
@@ -37,9 +39,9 @@ print("\n" + "="*80)
 print("  PARKINSON'S DETECTION - MODEL TRAINING")
 print("="*80)
 print("\n📊 Configuration:")
-print("  • Voice Features: 138 (MFCC, Spectral, Prosodic, Voice Quality)")
-print("  • Tremor Features: 25 (Magnitude, PC1, Time/Frequency Domain)")
-print("  • Models: Ensemble (SVM + RandomForest + GradientBoosting)")
+print("  • Voice Features: Optimized Selection (Top 25)")
+print("  • Tremor Features: 12 (Magnitude, Time/Frequency Domain)")
+print("  • Models: Ensemble (SVM + RandomForest + GradientBoosting + XGBoost)")
 print("="*80)
 
 start_time = time.time()
@@ -52,7 +54,7 @@ print("\n📁 Loading Tremor Dataset...")
 tremor_df = pd.read_csv('datasets/tremor_simplified.csv')
 print(f"✓ Loaded: {tremor_df.shape}")
 
-feature_cols = [col for col in tremor_df.columns if col not in ['subject_id', 'Rest_tremor', 'Postural_tremor', 'Kinetic_tremor', 'parkinsons_label']]
+feature_cols = [col for col in tremor_df.columns if col not in ['subject_id', 'Rest_tremor', 'Postural_tremor', 'Kinetic_tremor', 'parkinsons_label'] and not col.startswith('PC1')]
 X_tremor = tremor_df[feature_cols].values
 y_tremor = tremor_df['parkinsons_label'].values
 
@@ -150,8 +152,15 @@ if len(unique_labels) < 2:
     X_voice = np.vstack([X_voice, X_synthetic_healthy])
     y_voice = np.concatenate([y_voice, y_synthetic_healthy])
     
+    # Create synthetic filenames
+    synthetic_filenames = [f"synthetic_healthy_{i}" for i in range(n_synthetic)]
+    # Update voice_labels_df or create a new list of filenames
+    all_filenames = np.concatenate([voice_labels_df['filename'].values, synthetic_filenames])
+    
     print(f"  ✓ Added {n_synthetic} synthetic healthy samples")
     print(f"  • Final dataset: {len(X_voice)} samples (Parkinson's: {parkinsons_count}, Healthy: {n_synthetic})")
+else:
+    all_filenames = voice_labels_df['filename'].values
 
 # =============================================================================
 # TRAIN TREMOR MODEL
@@ -173,9 +182,10 @@ print(f"  • Training samples: {X_tremor_train_scaled.shape[0]}, Test samples: 
 tremor_svm = SVC(kernel='rbf', C=1.0, gamma='scale', probability=True, random_state=42)
 tremor_rf = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
 tremor_gb = GradientBoostingClassifier(n_estimators=100, max_depth=5, random_state=42)
+tremor_xgb = XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42, eval_metric='logloss')
 
 tremor_model = VotingClassifier(
-    estimators=[('svm', tremor_svm), ('rf', tremor_rf), ('gb', tremor_gb)],
+    estimators=[('svm', tremor_svm), ('rf', tremor_rf), ('gb', tremor_gb), ('xgb', tremor_xgb)],
     voting='soft'
 )
 
@@ -193,8 +203,23 @@ print(f"✓ Trained: {tremor_accuracy:.1%} test accuracy, {cv_scores.mean():.1%}
 
 print("\n🤖 Training Voice Model...")
 
+# Feature Selection for Voice
+print("  • Performing feature selection...")
+selector = SelectFromModel(RandomForestClassifier(n_estimators=100, random_state=42), max_features=25)
+X_voice_selected = selector.fit_transform(X_voice, y_voice)
+selected_indices = selector.get_support(indices=True)
+
+# Get feature names (assuming order from extractor)
+# We need to reconstruct the feature names list to save it
+dummy_features = audio_extractor._get_default_features()
+all_feature_names = sorted(dummy_features.keys())
+selected_feature_names = [all_feature_names[i] for i in selected_indices]
+
+print(f"  • Selected {len(selected_feature_names)} features from {X_voice.shape[1]}")
+print(f"  • Top features: {', '.join(selected_feature_names[:5])}...")
+
 X_voice_train, X_voice_test, y_voice_train, y_voice_test = train_test_split(
-    X_voice, y_voice, test_size=0.2, random_state=42, stratify=y_voice
+    X_voice_selected, y_voice, test_size=0.2, random_state=42, stratify=y_voice
 )
 
 voice_scaler = CustomStandardScaler()
@@ -207,9 +232,10 @@ print(f"  • Training samples: {X_voice_train_scaled.shape[0]}, Test samples: {
 voice_svm = SVC(kernel='rbf', C=1.0, gamma='scale', probability=True, random_state=42)
 voice_rf = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
 voice_gb = GradientBoostingClassifier(n_estimators=100, max_depth=5, random_state=42)
+voice_xgb = XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42, eval_metric='logloss')
 
 voice_model = VotingClassifier(
-    estimators=[('svm', voice_svm), ('rf', voice_rf), ('gb', voice_gb)],
+    estimators=[('svm', voice_svm), ('rf', voice_rf), ('gb', voice_gb), ('xgb', voice_xgb)],
     voting='soft'
 )
 
@@ -228,6 +254,10 @@ print(f"✓ Trained: {voice_accuracy:.1%} test accuracy, {voice_cv_scores.mean()
 print("\n💾 Saving Models...")
 os.makedirs('models', exist_ok=True)
 
+# Save selected feature names
+with open('models/voice_feature_names.pkl', 'wb') as f:
+    pickle.dump(selected_feature_names, f)
+
 with open('models/tremor_model.pkl', 'wb') as f:
     pickle.dump(tremor_model, f)
 with open('models/tremor_scaler.pkl', 'wb') as f:
@@ -238,9 +268,9 @@ with open('models/voice_scaler.pkl', 'wb') as f:
     pickle.dump(voice_scaler, f)
 
 voice_dataset_mapping = {
-    'features': X_voice,
+    'features': X_voice_selected,
     'labels': y_voice,
-    'filenames': voice_labels_df['filename'].values
+    'filenames': all_filenames
 }
 with open('models/voice_dataset_mapping.pkl', 'wb') as f:
     pickle.dump(voice_dataset_mapping, f)
@@ -249,16 +279,16 @@ tremor_dataset_mapping = {
     'features': X_tremor,
     'labels': y_tremor,
     'dataframe': tremor_df,  # Include full dataframe for detailed matching
-    'feature_columns': [col for col in tremor_df.columns if col not in ['subject_id', 'start_timestamp', 'end_timestamp', 'Rest_tremor', 'Postural_tremor', 'Kinetic_tremor', 'parkinsons_label']]
+    'feature_columns': [col for col in tremor_df.columns if col not in ['subject_id', 'start_timestamp', 'end_timestamp', 'Rest_tremor', 'Postural_tremor', 'Kinetic_tremor', 'parkinsons_label'] and not col.startswith('PC1')]
 }
 
 # Verify feature count
 print(f"\n🔍 Tremor mapping verification:")
 print(f"  • Feature columns: {len(tremor_dataset_mapping['feature_columns'])}")
 print(f"  • Feature array shape: {tremor_dataset_mapping['features'].shape}")
-assert len(tremor_dataset_mapping['feature_columns']) == 25, f"Expected 25 feature columns, got {len(tremor_dataset_mapping['feature_columns'])}"
-assert tremor_dataset_mapping['features'].shape[1] == 25, f"Expected 25 features in array, got {tremor_dataset_mapping['features'].shape[1]}"
-print(f"  ✅ Feature count verified: 25")
+assert len(tremor_dataset_mapping['feature_columns']) == 12, f"Expected 12 feature columns, got {len(tremor_dataset_mapping['feature_columns'])}"
+assert tremor_dataset_mapping['features'].shape[1] == 12, f"Expected 12 features in array, got {tremor_dataset_mapping['features'].shape[1]}"
+print(f"  ✅ Feature count verified: 12")
 
 with open('models/tremor_dataset_mapping.pkl', 'wb') as f:
     pickle.dump(tremor_dataset_mapping, f)
@@ -287,7 +317,9 @@ try:
     
     # Test that scalers can transform
     test_voice_sample = X_voice[:1]
-    test_voice_scaled = test_voice_scaler.transform(test_voice_sample)
+    # Apply selection first!
+    test_voice_sample_selected = selector.transform(test_voice_sample)
+    test_voice_scaled = test_voice_scaler.transform(test_voice_sample_selected)
     print(f"  ✓ Voice scaler transform: OK (shape: {test_voice_scaled.shape})")
     
     test_tremor_sample = X_tremor[:1]

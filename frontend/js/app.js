@@ -1255,32 +1255,39 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const rawAudioFeatures = results.audio_features || results.raw_features || {};
             console.log('Raw Audio Features:', rawAudioFeatures);
             
-            // Detailed voice features with all measured parameters
-            const voiceFeatures = [
-                // Row 1 - Pattern Recognition & Quality
-                { name: 'Voice\nQuality', icon: '📊', value: results.features?.['Voice Quality'] || 0, unit: '%' },
+            let voiceFeatures = [];
+            const featureKeys = Object.keys(rawAudioFeatures);
+
+            // Check if we have a filtered set of features (likely from feature selection)
+            // If we have keys and they look like technical names (e.g. mfcc, chroma), display them dynamically
+            if (featureKeys.length > 0) {
+                // Sort keys to group similar features
+                featureKeys.sort();
                 
-                // Row 2 - Pitch Analysis
-                { name: 'Pitch\nMean', icon: '🎼', value: rawAudioFeatures.pitch_mean || 0, unit: 'Hz' },
-                { name: 'Pitch Std\nDeviation', icon: '📈', value: rawAudioFeatures.pitch_std || 0, unit: 'Hz' },
-                { name: 'Pitch\nRange', icon: '📊', value: rawAudioFeatures.pitch_range || 0, unit: 'Hz' },
-                
-                // Row 3 - Voice Quality Metrics
-                { name: 'HNR\n(Harmonics)', icon: '🎚️', value: rawAudioFeatures.hnr_mean || 0, unit: 'dB' },
-                { name: 'Spectral\nCentroid', icon: '🌈', value: rawAudioFeatures.spectral_centroid_mean || 0, unit: 'Hz' },
-                { name: 'Spectral\nRolloff', icon: '📉', value: rawAudioFeatures.spectral_rolloff_mean || 0, unit: 'Hz' },
-                
-                // Row 4 - Bandwidth and Rate
-                { name: 'Speech\nRate', icon: '⚡', value: rawAudioFeatures.speech_rate || 0, unit: 'rate' },
-                { name: 'Spectral\nBandwidth', icon: '📡', value: rawAudioFeatures.spectral_bandwidth_mean || 0, unit: 'Hz' }
-            ];
+                featureKeys.forEach(key => {
+                    // Skip internal keys if any remain
+                    if (key.startsWith('_')) return;
+                    
+                    voiceFeatures.push({
+                        name: this.formatFeatureName(key),
+                        icon: this.getFeatureIcon(key),
+                        value: rawAudioFeatures[key],
+                        unit: ''
+                    });
+                });
+            } else {
+                // Fallback to default list if no features returned
+                voiceFeatures = [
+                    { name: 'No Features', icon: '❓', value: 0, unit: '' }
+                ];
+            }
             
             voiceFeatures.forEach((feature, index) => {
                 const featureCard = document.createElement('div');
                 featureCard.className = 'feature-item';
                 featureCard.style.animationDelay = `${index * 0.05}s`;
                 
-                const displayValue = typeof feature.value === 'number' ? feature.value.toFixed(2) : feature.value;
+                const displayValue = typeof feature.value === 'number' ? feature.value.toFixed(4) : feature.value;
                 
                 featureCard.innerHTML = `
                     <div class="feature-item-icon">${feature.icon}</div>
@@ -1353,7 +1360,30 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
 
         // Update total feature count in ML info
         const totalFeatures = voiceFeatureCount + tremorFeatureCount;
-        document.getElementById('feature-count-text').textContent = `${totalFeatures * 2}+ parameters analyzed`;
+        document.getElementById('feature-count-text').textContent = `${totalFeatures} parameters analyzed`;
+    }
+
+    formatFeatureName(key) {
+        // Convert snake_case to Title Case and make it readable
+        return key
+            .replace(/_/g, ' ')
+            .replace(/mfcc/i, 'MFCC')
+            .replace(/rms/i, 'RMS')
+            .replace(/zcr/i, 'ZCR')
+            .replace(/hnr/i, 'HNR')
+            .replace(/std/i, 'Std Dev')
+            .replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    getFeatureIcon(key) {
+        if (key.includes('mfcc')) return '🎼';
+        if (key.includes('chroma')) return '🌈';
+        if (key.includes('contrast')) return '🌗';
+        if (key.includes('tonnetz')) return '🎹';
+        if (key.includes('pitch')) return '📈';
+        if (key.includes('rms') || key.includes('energy')) return '⚡';
+        if (key.includes('zcr')) return '〰️';
+        return '📊';
     }
     
     displayDatasetMatch(datasetMatch) {

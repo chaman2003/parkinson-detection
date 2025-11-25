@@ -467,6 +467,114 @@
         "Postural Stability": 41.3,
         "Motion Variability": 87.6
       }
+    },
+    {
+      "recording_id": "voice_20251125_131417_407159",
+      "timestamp": "2025-11-25T13:14:17.409813",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_131417_407159.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 73.28,
+      "voice_confidence": 73.28,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 74.7
+      }
+    },
+    {
+      "recording_id": "voice_20251125_131449_976331",
+      "timestamp": "2025-11-25T13:14:49.978312",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_131449_976331.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 72.89,
+      "voice_confidence": 72.89,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_133641_554674",
+      "timestamp": "2025-11-25T13:36:41.557756",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_133641_554674.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 43.27,
+      "voice_confidence": 43.27,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_133718_272917",
+      "timestamp": "2025-11-25T13:37:18.275741",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_133718_272917.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 47.12,
+      "voice_confidence": 47.12,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 82.8
+      }
+    },
+    {
+      "recording_id": "voice_20251125_134058_129851",
+      "timestamp": "2025-11-25T13:40:58.131674",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_134058_129851.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 43.27,
+      "voice_confidence": 43.27,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_134130_782774",
+      "timestamp": "2025-11-25T13:41:30.785470",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_134130_782774.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 34.86,
+      "voice_confidence": 34.86,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 56.1
+      }
+    },
+    {
+      "recording_id": "voice_20251125_134203_769014",
+      "timestamp": "2025-11-25T13:42:03.770843",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_134203_769014.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 43.27,
+      "voice_confidence": 43.27,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_134227_637395",
+      "timestamp": "2025-11-25T13:42:27.639491",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_134227_637395.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 43.27,
+      "voice_confidence": 43.27,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_134238_662662",
+      "timestamp": "2025-11-25T13:42:38.677981",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_134238_662662.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 43.27,
+      "voice_confidence": 43.27,
+      "user_label": null,
+      "features": {}
     }
   ],
   "tremor_recordings": [
@@ -768,7 +876,7 @@
       "user_label": null
     }
   ],
-  "total_recordings": 67,
+  "total_recordings": 76,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",

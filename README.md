@@ -89,7 +89,7 @@ python server.py 8000
 |---------|-----|
 | Frontend | http://localhost:8000 |
 | Backend | http://localhost:5000/api |
-| Mobile | https://ostensible-unvibrant-clarisa.ngrok-free.dev |
+| Mobile | elease-unmeaning-mireille.ngrok-free.dev |
 
 ---
 
@@ -184,7 +184,7 @@ PWA Interface
 
 ### Base URLs
 - Local: `http://localhost:5000/api`
-- Production: `https://ostensible-unvibrant-clarisa.ngrok-free.dev/api`
+- Production: `elease-unmeaning-mireille.ngrok-free.dev/api`
 
 ### Endpoints
 

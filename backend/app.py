@@ -19,7 +19,7 @@ os.chdir(script_dir)
 from utils.ml_models import ParkinsonMLPipeline
 from utils.data_loader import DatasetLoader, load_single_voice_file
 from utils.data_storage import DataStorageManager
-from utils.audio_features_scipy import OptimizedAudioExtractor
+from utils.audio_features_optimized import OptimizedAudioExtractor
 from utils.tremor_features_optimized import OptimizedTremorExtractor
 from utils.dataset_matcher import DatasetMatcher
 

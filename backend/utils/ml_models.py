@@ -34,6 +34,7 @@ class ParkinsonMLPipeline:
         self.tremor_model = None
         self.voice_scaler = None
         self.tremor_scaler = None
+        self.voice_feature_names = None
         self.use_gpu = False  # Can be enabled for GPU training
         self.load_models()
     
@@ -42,14 +43,21 @@ class ParkinsonMLPipeline:
         rf_model = RandomForestClassifier(n_estimators=200, max_depth=15, random_state=42, n_jobs=-1)
         gb_model = GradientBoostingClassifier(n_estimators=150, learning_rate=0.1, max_depth=7, random_state=42)
         
-        # Note: XGBoost removed temporarily due to sklearn 1.7.2 compatibility issue
-        # The ensemble with SVM, RF, and GB still provides excellent performance
+        estimators = [('svm', svm_model), ('rf', rf_model), ('gb', gb_model)]
+        
+        # Add XGBoost if available
+        try:
+            xgb_model = xgb.XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42, eval_metric='logloss')
+            estimators.append(('xgb', xgb_model))
+            logger.info(f"Added XGBoost to {model_type} ensemble")
+        except Exception as e:
+            logger.warning(f"XGBoost not available: {e}")
+            
         ensemble = VotingClassifier(
-            estimators=[('svm', svm_model), ('rf', rf_model), ('gb', gb_model)], 
-            voting='soft', 
-            weights=[1, 2, 2]
+            estimators=estimators, 
+            voting='soft'
         )
-        logger.info(f"Built {model_type} ensemble model (SVM + RF + GB)")
+        logger.info(f"Built {model_type} ensemble model")
         return ensemble
     
     def train_models(self, X_voice, y_voice, X_tremor, y_tremor):
@@ -96,8 +104,14 @@ class ParkinsonMLPipeline:
             voice_is_idle = audio_features.pop('_silence_detected', False)
             silence_metrics = audio_features.pop('_silence_metrics', {})
             
-            # ALWAYS create audio vector for dataset matching
-            audio_vector = self._dict_to_vector(audio_features)
+            # Create audio vector using ONLY selected features if available
+            if self.voice_feature_names:
+                audio_vector = self._dict_to_vector_selected(audio_features, self.voice_feature_names)
+                # Filter features for response
+                audio_features = {k: audio_features.get(k, 0.0) for k in self.voice_feature_names}
+            else:
+                # Fallback to all features (should not happen if trained correctly)
+                audio_vector = self._dict_to_vector(audio_features)
             
             if voice_is_idle:
                 logger.warning(f"🔇 Voice idle/silence detected - returning low confidence")
@@ -120,10 +134,10 @@ class ParkinsonMLPipeline:
             tremor_is_idle = tremor_features.pop('_idle_detected', False)
             idle_metrics = tremor_features.pop('_idle_metrics', {})
             
-            # ALWAYS map features to training format (25 features)
+            # ALWAYS map features to training format (12 features)
             mapped_tremor_features = map_features_to_training_format(tremor_features)
             
-            # Convert to ordered array (25 features in correct order)
+            # Convert to ordered array (12 features in correct order)
             tremor_vector = features_dict_to_array(mapped_tremor_features)
             
             if tremor_is_idle:
@@ -145,8 +159,7 @@ class ParkinsonMLPipeline:
             tremor_pred = "Unknown"
             tremor_vector = None
         
-        # Determine combined prediction with intelligent feature-based boosting
-        # BUT: If either input is idle/baseline, use very low confidence
+        # Determine combined prediction based purely on ML models
         if audio_path is not None and motion_data is not None:
             # Both inputs provided
             if voice_is_idle and tremor_is_idle:
@@ -165,11 +178,11 @@ class ParkinsonMLPipeline:
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
                 logger.warning(f"⚠️ Motion idle - using voice only with penalty: {combined_conf*100:.1f}%")
             else:
-                # Both active - use raw ML predictions without synthetic boost
-                logger.info(f"� Raw ML confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
+                # Both active - use raw ML predictions
+                logger.info(f"📊 Raw ML confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
                 
                 # Combined confidence - simple average of both models
-                combined_conf = (voice_conf * 0.5 + tremor_conf * 0.5)
+                combined_conf = (voice_conf + tremor_conf) / 2.0
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
                 
                 logger.info(f"✅ Final combined confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
@@ -181,7 +194,7 @@ class ParkinsonMLPipeline:
                 combined_pred = "Insufficient Data"
                 logger.warning(f"⚠️ Voice-only test with idle audio - returning {combined_conf*100:.1f}% confidence")
             else:
-                # Use raw ML prediction without synthetic boost
+                # Use raw ML prediction
                 combined_conf = voice_conf
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
                 logger.info(f"📊 Voice-only raw ML confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
@@ -193,7 +206,7 @@ class ParkinsonMLPipeline:
                 combined_pred = "Insufficient Data"
                 logger.warning(f"⚠️ Tremor-only test with idle motion - returning {combined_conf*100:.1f}% confidence")
             else:
-                # Use raw ML prediction without synthetic boost or intensity calculation
+                # Use raw ML prediction
                 combined_conf = tremor_conf
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
                 logger.info(f"📊 Tremor-only raw ML confidence: {combined_conf:.3f} ({combined_conf*100:.1f}%)")
@@ -266,6 +279,24 @@ class ParkinsonMLPipeline:
             logger.error(f"Error in tremor prediction: {str(e)}")
             return "Unknown", 0.5
     
+    def _dict_to_vector_selected(self, features_dict, selected_names):
+        """Convert feature dictionary to flat numpy array using ONLY selected features in order"""
+        values = []
+        for key in selected_names:
+            val = features_dict.get(key, 0.0)
+            # Convert to scalar if it's an array-like object
+            if isinstance(val, (list, np.ndarray)):
+                if hasattr(val, '__len__') and len(val) > 0:
+                    val = float(np.mean(val))
+                else:
+                    val = 0.0
+            try:
+                val = float(val)
+            except (ValueError, TypeError):
+                val = 0.0
+            values.append(val)
+        return np.array(values, dtype=np.float64)
+
     def _dict_to_vector(self, features_dict):
         """Convert feature dictionary to flat numpy array, handling nested arrays"""
         sorted_keys = sorted(features_dict.keys())
@@ -374,176 +405,6 @@ class ParkinsonMLPipeline:
         
         return insights
     
-    def _calculate_intensity_based_confidence(self, tremor_features, tremor_insights):
-        """
-        Calculate confidence based PURELY on movement intensity.
-        Slight movements -> ~50%, Moderate -> ~70%, Intense -> ~90%
-        This replaces ML prediction with physics-based assessment.
-        """
-        magnitude_mean = tremor_features.get('Magnitude_mean', 0)
-        magnitude_std = tremor_features.get('Magnitude_std_dev', 0)
-        magnitude_rms = tremor_features.get('Magnitude_rms', 0)
-        tremor_band_power = tremor_features.get('tremor_band_power_mag', 0)  # Not in training data, keep as is
-        dom_freq = tremor_features.get('Magnitude_fft_dom_freq', 0)
-        
-        logger.info(f"🎯 Intensity-based confidence calculation:")
-        logger.info(f"   - Magnitude mean: {magnitude_mean:.2f} m/s²")
-        logger.info(f"   - Magnitude std: {magnitude_std:.2f} m/s²")
-        logger.info(f"   - RMS: {magnitude_rms:.2f} m/s²")
-        logger.info(f"   - Tremor band power: {tremor_band_power:.4f}")
-        
-        # Base confidence from movement magnitude
-        if magnitude_mean < 2.0:
-            # Very slight movement: 30-45%
-            base_conf = 0.30 + (magnitude_mean / 2.0) * 0.15
-            intensity_label = "Very Slight"
-        elif magnitude_mean < 5.0:
-            # Slight to moderate movement: 45-65%
-            base_conf = 0.45 + ((magnitude_mean - 2.0) / 3.0) * 0.20
-            intensity_label = "Slight-Moderate"
-        elif magnitude_mean < 10.0:
-            # Moderate to strong movement: 65-85%
-            base_conf = 0.65 + ((magnitude_mean - 5.0) / 5.0) * 0.20
-            intensity_label = "Moderate-Strong"
-        else:
-            # Intense movement: 85-95%
-            base_conf = 0.85 + min((magnitude_mean - 10.0) / 20.0, 0.10)
-            intensity_label = "Intense"
-        
-        # Adjust based on movement variability
-        if magnitude_std > 2.0:
-            base_conf += 0.05  # Variable movement suggests tremor
-        
-        # Adjust based on tremor band power (4-6 Hz)
-        if tremor_band_power > 0.1:
-            base_conf += 0.03  # Significant power in tremor range
-        
-        # Adjust based on frequency characteristics
-        if 4.0 <= dom_freq <= 6.0:
-            base_conf += 0.02  # Classic Parkinson's tremor frequency
-        elif 6.0 < dom_freq <= 12.0:
-            base_conf += 0.01  # Possible tremor activity
-        
-        # Cap at 0.95 (95%)
-        final_conf = min(0.95, base_conf)
-        
-        logger.info(f"   ➜ Intensity: {intensity_label}")
-        logger.info(f"   ➜ Base confidence: {base_conf:.3f}")
-        logger.info(f"   ➜ Final confidence: {final_conf:.3f} ({final_conf*100:.1f}%)")
-        
-        return final_conf
-    
-    def _calculate_voice_feature_boost(self, audio_features, voice_insights):
-        """
-        Calculate confidence boost based on strong voice indicators.
-        AGGRESSIVE BOOST to ensure proper confidence levels.
-        Returns boost value between 0 and 0.45 (increased significantly)
-        """
-        boost = 0.0
-        
-        logger.info(f"🔍 Voice boost calculation - features count: {len(audio_features)}")
-        
-        # Base boost for any voice recording
-        if len(audio_features) > 0:
-            boost += 0.15  # Increased base boost
-            logger.info(f"🎤 Base voice boost: +0.15")
-        
-        # Jitter analysis (higher jitter = stronger indicator)
-        if 'pitch_jitter' in audio_features:
-            jitter = audio_features['pitch_jitter']
-            if jitter > 0.001:  # Much lower threshold
-                boost += min(0.15, jitter * 15)  # Much higher multiplier
-                logger.info(f"〰️ Jitter boost: {jitter:.4f} -> +{min(0.15, jitter * 15):.3f}")
-        
-        # Shimmer analysis (higher shimmer = stronger indicator)
-        if 'amplitude_shimmer' in audio_features:
-            shimmer = audio_features['amplitude_shimmer']
-            if shimmer > 0.01:  # Lower threshold
-                boost += min(0.12, shimmer * 3)  # Higher multiplier
-                logger.info(f"📈 Shimmer boost: {shimmer:.4f} -> +{min(0.12, shimmer * 3):.3f}")
-        
-        # HNR analysis (lower HNR = stronger indicator)
-        if 'hnr' in audio_features:
-            hnr = audio_features['hnr']
-            if hnr < 25:  # Raised threshold even more
-                hnr_deficit = (25 - hnr) / 25
-                boost += min(0.10, hnr_deficit * 0.5)  # Increased boost
-                logger.info(f"📊 HNR boost: {hnr:.2f} -> +{min(0.10, hnr_deficit * 0.5):.3f}")
-        
-        # Pitch stability (higher std = stronger indicator)
-        if 'pitch_std' in audio_features:
-            pitch_std = audio_features['pitch_std']
-            if pitch_std > 10:  # Much lower threshold
-                boost += min(0.08, pitch_std / 80)  # Increased boost
-                logger.info(f"🎵 Pitch std boost: {pitch_std:.2f} -> +{min(0.08, pitch_std / 80):.3f}")
-        
-        total_boost = min(0.45, boost)  # Increased cap to 0.45
-        logger.info(f"✅ Total voice boost: {total_boost:.3f}")
-        return total_boost
-    
-    def _calculate_tremor_feature_boost(self, tremor_features, tremor_insights):
-        """
-        Calculate confidence boost based on strong tremor indicators.
-        AGGRESSIVE BOOST for any significant movement to ensure 70+ confidence.
-        Returns boost value between 0 and 0.45 (increased significantly)
-        """
-        boost = 0.0
-        
-        # Log features for debugging - use mapped feature names
-        magnitude_mean = tremor_features.get('Magnitude_mean', 0)
-        logger.info(f"🔍 Tremor boost calculation - Magnitude_mean: {magnitude_mean}")
-        
-        # MAJOR BOOST: Any movement above 5 m/s² gets substantial boost
-        if magnitude_mean > 5:  # Lowered threshold significantly
-            # Very aggressive boost: 5-10 m/s² gets 0.20-0.30 boost
-            boost += min(0.30, (magnitude_mean - 5) / 15)
-            logger.info(f"💪 High magnitude boost: {boost:.3f}")
-        
-        # BOOST: Even moderate movement gets boost
-        elif magnitude_mean > 2:
-            boost += 0.10  # Base boost for any intentional movement
-            logger.info(f"📊 Moderate magnitude boost: {boost:.3f}")
-        
-        # Magnitude standard deviation (higher = more tremor/variation)
-        if 'Magnitude_std_dev' in tremor_features:
-            mag_std = tremor_features['Magnitude_std_dev']
-            if mag_std > 0.5:  # Lowered threshold
-                boost += min(0.12, mag_std / 10)  # Increased to 0.12
-                logger.info(f"📈 Std dev boost: {mag_std:.3f} -> +{min(0.12, mag_std / 10):.3f}")
-        
-        # RMS energy (higher = stronger tremor) - much higher weight
-        if 'Magnitude_rms' in tremor_features:
-            rms = tremor_features['Magnitude_rms']
-            if rms > 5:  # Lowered threshold
-                boost += min(0.10, (rms - 5) / 10)  # Increased to 0.10
-                logger.info(f"⚡ RMS boost: {rms:.3f} -> +{min(0.10, (rms - 5) / 10):.3f}")
-        
-        # Tremor band power - calculated from FFT (not directly in mapped features)
-        # Use as approximation from entropy
-        if 'Magnitude_fft_entropy' in tremor_features:
-            entropy = tremor_features['Magnitude_fft_entropy']
-            if entropy > 2.0:  # Higher entropy suggests varied frequency content
-                boost += min(0.08, entropy / 30)
-                logger.info(f"🎯 Entropy boost: {entropy:.4f} -> +{min(0.08, entropy / 30):.3f}")
-        
-        # Dominant frequency - any activity gets boost
-        if 'Magnitude_fft_dom_freq' in tremor_features:
-            dom_freq = tremor_features['Magnitude_fft_dom_freq']
-            if dom_freq > 1.0:  # Very broad range
-                boost += 0.05  # Increased boost
-                logger.info(f"📳 Frequency boost: {dom_freq:.2f} Hz -> +0.05")
-        
-        # Peak rate (more peaks = more tremor activity)
-        if 'Magnitude_peaks_rt' in tremor_features:
-            peak_rate = tremor_features['Magnitude_peaks_rt']
-            if peak_rate > 0.01:  # Very low threshold
-                boost += min(0.05, peak_rate)  # Increased
-                logger.info(f"📍 Peak rate boost: {peak_rate:.3f} -> +{min(0.05, peak_rate):.3f}")
-        
-        total_boost = min(0.45, boost)  # Increased cap to 0.45
-        logger.info(f"✅ Total tremor boost: {total_boost:.3f}")
-        return total_boost
-    
     def save_models(self):
         os.makedirs(self.model_dir, exist_ok=True)
         if self.voice_model:
@@ -568,6 +429,14 @@ class ParkinsonMLPipeline:
                     self.voice_model = pickle.load(f)
                 with open(os.path.join(self.model_dir, 'voice_scaler.pkl'), 'rb') as f:
                     self.voice_scaler = pickle.load(f)
+                
+                # Load feature names if available
+                feature_names_path = os.path.join(self.model_dir, 'voice_feature_names.pkl')
+                if os.path.exists(feature_names_path):
+                    with open(feature_names_path, 'rb') as f:
+                        self.voice_feature_names = pickle.load(f)
+                    logger.info(f"Loaded {len(self.voice_feature_names)} selected voice features")
+                
                 logger.info("Loaded voice model")
             
             tremor_model_path = os.path.join(self.model_dir, 'tremor_model.pkl')
