@@ -248,6 +248,55 @@ voice_cv_scores = cross_val_score(voice_model, X_voice_train_scaled, y_voice_tra
 print(f"✓ Trained: {voice_accuracy:.1%} test accuracy, {voice_cv_scores.mean():.1%} CV accuracy")
 
 # =============================================================================
+# VALIDATE ON REAL-HEALTHY DATA
+# =============================================================================
+
+print("\n🏥 Validating on Real-Healthy Data...")
+
+# Identify real-healthy samples from the original dataframe
+# We need to find indices in X_voice that correspond to real-healthy files
+real_healthy_indices = []
+real_healthy_filenames = []
+
+for i, filename in enumerate(all_filenames):
+    if 'real-healthy' in str(filename) or (i < len(voice_labels_df) and 'real-healthy' in voice_labels_df.iloc[i]['filepath']):
+        real_healthy_indices.append(i)
+        real_healthy_filenames.append(filename)
+
+if len(real_healthy_indices) > 0:
+    print(f"  • Found {len(real_healthy_indices)} real-healthy samples")
+    
+    # Get features for these samples
+    # Note: We need to be careful if we added synthetic data. 
+    # The indices in X_voice match all_filenames.
+    
+    X_real_healthy = X_voice[real_healthy_indices]
+    y_real_healthy = y_voice[real_healthy_indices] # Should be all 0s
+    
+    # Apply selection and scaling
+    X_real_healthy_selected = selector.transform(X_real_healthy)
+    X_real_healthy_scaled = voice_scaler.transform(X_real_healthy_selected)
+    
+    # Predict
+    y_real_healthy_pred = voice_model.predict(X_real_healthy_scaled)
+    y_real_healthy_proba = voice_model.predict_proba(X_real_healthy_scaled)
+    
+    # Calculate accuracy
+    real_healthy_acc = accuracy_score(y_real_healthy, y_real_healthy_pred)
+    
+    print(f"  • Accuracy on Real-Healthy: {real_healthy_acc:.1%} ({np.sum(y_real_healthy_pred == 0)}/{len(y_real_healthy)} correctly identified as healthy)")
+    
+    # Show individual predictions
+    print("\n  Detailed Predictions for Real-Healthy:")
+    for i, pred in enumerate(y_real_healthy_pred):
+        status = "✅ CORRECT (Healthy)" if pred == 0 else "❌ WRONG (Parkinson's)"
+        confidence = y_real_healthy_proba[i][pred]
+        print(f"    - {real_healthy_filenames[i]}: {status} (Conf: {confidence:.2f})")
+        
+else:
+    print("  ⚠️  No real-healthy samples found in the dataset!")
+
+# =============================================================================
 # SAVE MODELS
 # =============================================================================
 

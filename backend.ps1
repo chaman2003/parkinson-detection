@@ -45,7 +45,7 @@ if (Test-Path $backendPath) {
 Write-Host "Starting ngrok Tunnel..." -ForegroundColor Cyan
 $ngrokPath = Join-Path $scriptDir "ngrok.exe"
 if (Test-Path $ngrokPath) {
-    Start-Process $ngrokPath -ArgumentList "http --domain=ostensible-unvibrant-clarisa.ngrok-free.dev 5000" -WindowStyle Normal
+    Start-Process $ngrokPath -ArgumentList "http --domain=elease-unmeaning-mireille.ngrok-free.dev 5000" -WindowStyle Normal
     Start-Sleep -Seconds 8
     Write-Host "  ngrok tunnel started" -ForegroundColor Green
 } else {

@@ -597,6 +597,132 @@
       "voice_confidence": 60.16,
       "user_label": null,
       "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_205507_043265",
+      "timestamp": "2025-11-25T20:55:07.048313",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_205507_043265.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 66.6,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_205626_996486",
+      "timestamp": "2025-11-25T20:56:26.997831",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_205626_996486.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 33.3,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {
+        "Tremor Frequency": 0.0,
+        "Postural Stability": 100.0,
+        "Motion Variability": 0.0
+      }
+    },
+    {
+      "recording_id": "voice_20251125_205630_836206",
+      "timestamp": "2025-11-25T20:56:30.837545",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_205630_836206.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 33.3,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {
+        "Tremor Frequency": 0.0,
+        "Postural Stability": 100.0,
+        "Motion Variability": 0.0
+      }
+    },
+    {
+      "recording_id": "voice_20251125_205721_443716",
+      "timestamp": "2025-11-25T20:57:21.445212",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_205721_443716.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 33.3,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {
+        "Tremor Frequency": 0.0,
+        "Postural Stability": 100.0,
+        "Motion Variability": 0.0
+      }
+    },
+    {
+      "recording_id": "voice_20251125_205812_872822",
+      "timestamp": "2025-11-25T20:58:12.874170",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_205812_872822.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 33.3,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {
+        "Tremor Frequency": 0.0,
+        "Postural Stability": 100.0,
+        "Motion Variability": 0.0
+      }
+    },
+    {
+      "recording_id": "voice_20251125_210235_607827",
+      "timestamp": "2025-11-25T21:02:35.609416",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_210235_607827.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 66.6,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_210254_883129",
+      "timestamp": "2025-11-25T21:02:54.884610",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_210254_883129.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 66.6,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_210444_105289",
+      "timestamp": "2025-11-25T21:04:44.107266",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_210444_105289.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 66.6,
+      "voice_confidence": 66.6,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_211811_236897",
+      "timestamp": "2025-11-25T21:18:11.240997",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_211811_236897.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_211829_122850",
+      "timestamp": "2025-11-25T21:18:29.125387",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251125_211829_122850.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {}
     }
   ],
   "tremor_recordings": [
@@ -896,9 +1022,90 @@
       "confidence": 63.42,
       "tremor_confidence": 53.97,
       "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205431_852370",
+      "timestamp": "2025-11-25T20:54:31.878717",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 55.13,
+      "tremor_confidence": 55.13,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205627_000999",
+      "timestamp": "2025-11-25T20:56:27.014601",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 33.3,
+      "tremor_confidence": 5.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205630_841166",
+      "timestamp": "2025-11-25T20:56:30.868142",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 33.3,
+      "tremor_confidence": 5.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205721_448566",
+      "timestamp": "2025-11-25T20:57:21.462347",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 33.3,
+      "tremor_confidence": 5.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205812_877514",
+      "timestamp": "2025-11-25T20:58:12.890304",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 33.3,
+      "tremor_confidence": 5.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205845_239964",
+      "timestamp": "2025-11-25T20:58:45.252763",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 5.0,
+      "tremor_confidence": 5.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_205914_038661",
+      "timestamp": "2025-11-25T20:59:14.052792",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 45.72,
+      "tremor_confidence": 45.72,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_210023_853859",
+      "timestamp": "2025-11-25T21:00:23.887914",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.34,
+      "tremor_confidence": 63.34,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251125_210023_987559",
+      "timestamp": "2025-11-25T21:00:24.003712",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 63.34,
+      "tremor_confidence": 63.34,
+      "user_label": null
     }
   ],
-  "total_recordings": 78,
+  "total_recordings": 97,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",
@@ -969,6 +1176,34 @@
       "tremor_recording_id": "tremor_20251028_104219_845063",
       "combined_prediction": "Affected",
       "combined_confidence": 63.42
+    },
+    {
+      "timestamp": "2025-11-25T20:56:27.017256",
+      "voice_recording_id": "voice_20251125_205626_996486",
+      "tremor_recording_id": "tremor_20251125_205627_000999",
+      "combined_prediction": "Not Affected",
+      "combined_confidence": 33.3
+    },
+    {
+      "timestamp": "2025-11-25T20:56:30.870795",
+      "voice_recording_id": "voice_20251125_205630_836206",
+      "tremor_recording_id": "tremor_20251125_205630_841166",
+      "combined_prediction": "Not Affected",
+      "combined_confidence": 33.3
+    },
+    {
+      "timestamp": "2025-11-25T20:57:21.465221",
+      "voice_recording_id": "voice_20251125_205721_443716",
+      "tremor_recording_id": "tremor_20251125_205721_448566",
+      "combined_prediction": "Not Affected",
+      "combined_confidence": 33.3
+    },
+    {
+      "timestamp": "2025-11-25T20:58:12.893171",
+      "voice_recording_id": "voice_20251125_205812_872822",
+      "tremor_recording_id": "tremor_20251125_205812_877514",
+      "combined_prediction": "Not Affected",
+      "combined_confidence": 33.3
     }
   ]
 }

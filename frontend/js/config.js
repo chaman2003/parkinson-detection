@@ -32,8 +32,10 @@ const AppConfig = {
         } else {
             // Production (Vercel or ngrok): use environment variable + /api path
             // Vercel will inject BACKEND_URL as a global variable
+            // Fallback to the hardcoded ngrok URL if env var is not set
             const backendUrl = window.BACKEND_URL || 
-                             (typeof process !== 'undefined' && process.env?.BACKEND_URL);
+                             (typeof process !== 'undefined' && process.env?.BACKEND_URL) ||
+                             'https://elease-unmeaning-mireille.ngrok-free.dev';
             
             if (backendUrl) {
                 console.log('🚀 Production mode: Using configured backend URL:', backendUrl);
