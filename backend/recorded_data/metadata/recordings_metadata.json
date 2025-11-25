@@ -575,6 +575,28 @@
       "voice_confidence": 43.27,
       "user_label": null,
       "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_203020_351402",
+      "timestamp": "2025-11-25T20:30:20.353300",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_203020_351402.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 60.16,
+      "voice_confidence": 60.16,
+      "user_label": null,
+      "features": {}
+    },
+    {
+      "recording_id": "voice_20251125_203048_158909",
+      "timestamp": "2025-11-25T20:30:48.160426",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251125_203048_158909.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 60.16,
+      "voice_confidence": 60.16,
+      "user_label": null,
+      "features": {}
     }
   ],
   "tremor_recordings": [
@@ -876,7 +898,7 @@
       "user_label": null
     }
   ],
-  "total_recordings": 76,
+  "total_recordings": 78,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",

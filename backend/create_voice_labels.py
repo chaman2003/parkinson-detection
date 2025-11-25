@@ -7,6 +7,7 @@ from pathlib import Path
 
 # Paths
 healthy_dir = Path('datasets/voice_dataset/healthy')
+real_healthy_dir = Path('datasets/voice_dataset/real-healthy')
 parkinson_dir = Path('datasets/voice_dataset/parkinson')
 output_csv = Path('datasets/voice_labels.csv')
 
@@ -22,6 +23,18 @@ if healthy_dir.exists():
             'parkinsons_label': 0,
             'category': 'healthy',
             'notes': 'Healthy voice sample'
+        })
+
+# Add Real Healthy samples (label = 0) - Realistic mic data
+if real_healthy_dir.exists():
+    # Look for both .wav and .mp3 files
+    for audio_file in list(real_healthy_dir.glob('*.wav')) + list(real_healthy_dir.glob('*.mp3')):
+        rows.append({
+            'filename': audio_file.name,
+            'filepath': f'datasets/voice_dataset/real-healthy/{audio_file.name}',
+            'parkinsons_label': 0,
+            'category': 'healthy',
+            'notes': 'Real healthy voice sample (mic)'
         })
 
 # Add Parkinson's samples (label = 1)
