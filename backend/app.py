@@ -323,6 +323,11 @@ def root():
     """Root endpoint for testing"""
     return jsonify({'message': 'Parkinson Detection API is running', 'status': 'ok'})
 
+@app.route('/favicon.ico', methods=['GET'])
+def favicon():
+    """Serve favicon to prevent 404 errors"""
+    return '', 204  # Return empty response with No Content status
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
