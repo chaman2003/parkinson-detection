@@ -108,15 +108,19 @@ class OptimizedTremorExtractor:
             gravity_diff = abs(mag_mean - 9.8)
             
             # Detect idle if:
-            # 1. Very low standard deviation (< 0.1 m/s²)
-            # 2. Small range of motion (< 0.3 m/s²)
+            # 1. Very low standard deviation (< 0.1 m/s²) AND low total axis variation
+            # 2. Small range of motion (< 0.3 m/s²) AND low total axis variation
             # 3. Low coefficient of variation (< 2%)
             # 4. Or magnitude close to gravity with minimal variation
+            
+            # Key fix: Ensure we don't flag constant-magnitude motion (like perfect circles) as idle
+            # by checking individual axis variation
+            
             is_idle = (
-                mag_std < 0.15 or  # Very stable readings
-                mag_range < 0.4 or  # Minimal motion
-                cv < 3 or  # Very low relative variation
-                (gravity_diff < 0.5 and mag_std < 0.2)  # Still, near gravity
+                (mag_std < 0.15 and total_std < 0.5) or  # Stable magnitude AND stable axes
+                (mag_range < 0.4 and total_std < 0.5) or  # Small range AND stable axes
+                (cv < 3 and total_std < 0.5) or  # Low variation AND stable axes
+                (gravity_diff < 0.5 and mag_std < 0.2 and total_std < 0.5)  # Still, near gravity
             )
             
             metrics = {

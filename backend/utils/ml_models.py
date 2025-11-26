@@ -19,6 +19,7 @@ from feature_mapper import map_features_to_training_format, features_dict_to_arr
 
 from .audio_features_optimized import OptimizedAudioExtractor
 from .tremor_features_optimized import OptimizedTremorExtractor
+from .personalized_model import PersonalizedModelHandler
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +27,12 @@ logger = logging.getLogger(__name__)
 class ParkinsonMLPipeline:
     """Complete ML Pipeline for Parkinson's Detection"""
     
-    def __init__(self, model_dir='models'):
+    def __init__(self, model_dir='models', user_id=None):
         self.model_dir = model_dir
+        self.user_id = user_id  # NEW: Support for personalized models
         self.audio_extractor = OptimizedAudioExtractor()
         self.tremor_extractor = OptimizedTremorExtractor()
+        self.personalized_handler = PersonalizedModelHandler()  # NEW
         self.voice_model = None
         self.tremor_model = None
         self.voice_scaler = None
@@ -89,6 +92,7 @@ class ParkinsonMLPipeline:
         tremor_vector = None
         voice_insights = {}
         tremor_insights = {}
+        personalized_result = None  # NEW: Store personalized analysis
         
         # Flags for idle/baseline detection
         voice_is_idle = False
@@ -103,6 +107,29 @@ class ParkinsonMLPipeline:
             # Check for silence/idle detection
             voice_is_idle = audio_features.pop('_silence_detected', False)
             silence_metrics = audio_features.pop('_silence_metrics', {})
+            
+            # NEW: Try personalized model first if user_id is set
+            if self.user_id and self.personalized_handler.has_personalized_model(self.user_id):
+                logger.info(f"🎯 Using personalized model for user {self.user_id}")
+                personalized_result = self.personalized_handler.analyze_with_personalized_model(
+                    self.user_id, audio_features.copy()
+                )
+                
+                if personalized_result.get('success'):
+                    # Convert deviation to confidence score (inverse relationship)
+                    # High deviation = low confidence (more different from baseline = potential issue)
+                    deviation = personalized_result['deviation_percent']
+                    personalized_confidence = min(100, max(0, 100 - deviation))
+                    
+                    logger.info(f"📊 Personalized: Deviation={deviation:.1f}%, Confidence={personalized_confidence:.1f}%")
+                    
+                    # Add personalized insights
+                    voice_insights['personalized_analysis'] = {
+                        'deviation_from_baseline': round(deviation, 1),
+                        'is_anomaly': personalized_result['is_anomaly'],
+                        'interpretation': personalized_result['interpretation'],
+                        'baseline_samples': personalized_result['baseline_samples']
+                    }
             
             # Create audio vector using ONLY selected features if available
             if self.voice_feature_names:
@@ -235,8 +262,12 @@ class ParkinsonMLPipeline:
             voice_insights, tremor_insights, voice_conf, tremor_conf, combined_conf
         )
         
+        # NEW: Add personalized analysis to response if available
+        if personalized_result and personalized_result.get('success'):
+            comprehensive_insights['personalized'] = voice_insights.get('personalized_analysis', {})
+        
         # Convert to 0-100 scale for user display
-        return {
+        result = {
             'prediction': combined_pred,
             'confidence': round(float(combined_conf) * 100, 2),  # Convert to 0-100
             'voice_confidence': round(float(voice_conf) * 100, 2),  # Convert to 0-100
@@ -257,9 +288,17 @@ class ParkinsonMLPipeline:
                 'motion_samples': len(motion_data) if motion_data is not None else 0,
                 'model_version': '1.0.0',
                 'model_type': 'optimized_ensemble',
-                'optimization': 'parallel_extraction'
+                'optimization': 'parallel_extraction',
+                'uses_personalized_model': self.user_id is not None and personalized_result is not None
             }
         }
+        
+        # NEW: Add personalized metrics if available
+        if personalized_result and personalized_result.get('success'):
+            result['personalized_confidence'] = round(personalized_confidence, 2)
+            result['baseline_deviation'] = round(personalized_result['deviation_percent'], 2)
+        
+        return result
     
     def _predict_voice(self, feature_vector):
         if self.voice_model is None or self.voice_scaler is None:

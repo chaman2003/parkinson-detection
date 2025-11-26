@@ -723,6 +723,300 @@
       "voice_confidence": 5.0,
       "user_label": null,
       "features": {}
+    },
+    {
+      "recording_id": "voice_20251126_192210_117214",
+      "timestamp": "2025-11-26T19:22:10.120196",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_192210_117214.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194001_541336",
+      "timestamp": "2025-11-26T19:40:01.543504",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194001_541336.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194020_813452",
+      "timestamp": "2025-11-26T19:40:20.815075",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194020_813452.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194048_591704",
+      "timestamp": "2025-11-26T19:40:48.593633",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194048_591704.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 31.37,
+      "voice_confidence": 31.37,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 100.0
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194130_772557",
+      "timestamp": "2025-11-26T19:41:30.774329",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194130_772557.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 34.03,
+      "voice_confidence": 34.03,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 91.0
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194204_113404",
+      "timestamp": "2025-11-26T19:42:04.115315",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194204_113404.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194237_037935",
+      "timestamp": "2025-11-26T19:42:37.039609",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194237_037935.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194305_285866",
+      "timestamp": "2025-11-26T19:43:05.301545",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194305_285866.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194334_396372",
+      "timestamp": "2025-11-26T19:43:34.398094",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194334_396372.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 31.93,
+      "voice_confidence": 31.93,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 66.4
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194351_651012",
+      "timestamp": "2025-11-26T19:43:51.652168",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194351_651012.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 31.78,
+      "voice_confidence": 31.78,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 100.0
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194413_625958",
+      "timestamp": "2025-11-26T19:44:13.627349",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194413_625958.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194440_676925",
+      "timestamp": "2025-11-26T19:44:40.687598",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194440_676925.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_194517_437988",
+      "timestamp": "2025-11-26T19:45:17.440066",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_194517_437988.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200137_124280",
+      "timestamp": "2025-11-26T20:01:37.127894",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_200137_124280.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200159_929790",
+      "timestamp": "2025-11-26T20:01:59.931410",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_200159_929790.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200230_110830",
+      "timestamp": "2025-11-26T20:02:30.112540",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251126_200230_110830.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 52.68,
+      "voice_confidence": 52.68,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 48.5
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200252_603054",
+      "timestamp": "2025-11-26T20:02:52.604874",
+      "file_path": "recorded_data\\voice_recordings\\parkinsons\\voice_20251126_200252_603054.wav",
+      "predicted_label": "parkinsons",
+      "prediction_value": 1,
+      "confidence": 52.43,
+      "voice_confidence": 52.43,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 19.6
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200815_884106",
+      "timestamp": "2025-11-26T20:08:15.886546",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_200815_884106.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 40.21,
+      "voice_confidence": 40.21,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 51.3
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200839_750731",
+      "timestamp": "2025-11-26T20:08:39.753347",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_200839_750731.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 26.27,
+      "voice_confidence": 26.27,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 40.5
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200905_850972",
+      "timestamp": "2025-11-26T20:09:05.852804",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_200905_850972.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 27.53,
+      "voice_confidence": 27.53,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 38.7
+      }
+    },
+    {
+      "recording_id": "voice_20251126_200934_598552",
+      "timestamp": "2025-11-26T20:09:34.600303",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251126_200934_598552.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 29.84,
+      "voice_confidence": 29.84,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 55.1
+      }
     }
   ],
   "tremor_recordings": [
@@ -1103,9 +1397,54 @@
       "confidence": 63.34,
       "tremor_confidence": 63.34,
       "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251126_193649_265405",
+      "timestamp": "2025-11-26T19:36:49.301116",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 5.0,
+      "tremor_confidence": 5.0,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251126_193724_917873",
+      "timestamp": "2025-11-26T19:37:24.940411",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 48.59,
+      "tremor_confidence": 48.59,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251126_193753_135860",
+      "timestamp": "2025-11-26T19:37:53.154966",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 50.2,
+      "tremor_confidence": 50.2,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251126_193821_823378",
+      "timestamp": "2025-11-26T19:38:21.842133",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 51.51,
+      "tremor_confidence": 51.51,
+      "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251126_193856_291442",
+      "timestamp": "2025-11-26T19:38:56.310810",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 1,
+      "confidence": 54.15,
+      "tremor_confidence": 54.15,
+      "user_label": null
     }
   ],
-  "total_recordings": 97,
+  "total_recordings": 123,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",

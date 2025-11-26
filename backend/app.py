@@ -22,6 +22,7 @@ from utils.data_storage import DataStorageManager
 from utils.audio_features_optimized import OptimizedAudioExtractor
 from utils.tremor_features_optimized import OptimizedTremorExtractor
 from utils.dataset_matcher import DatasetMatcher
+from utils.personalized_model import PersonalizedModelHandler
 
 # Configure logging - disable colors on Windows to avoid ANSI codes
 import sys
@@ -144,6 +145,7 @@ try:
     storage_manager = DataStorageManager()
     audio_extractor = OptimizedAudioExtractor()
     tremor_extractor = OptimizedTremorExtractor()
+    personalized_handler = PersonalizedModelHandler()  # NEW: Handle personalized baselines
     logger.info("✓ Utilities initialized successfully")
 except Exception as e:
     logger.error(f"✗ Failed to initialize utilities: {str(e)}")
@@ -710,6 +712,7 @@ def analyze_data():
     Expects:
     - audio file (multipart/form-data)
     - motion_data (JSON string)
+    - user_id (optional): If provided, uses personalized model
     """
     try:
         # Enhanced data validation for 100% accuracy
@@ -722,6 +725,7 @@ def analyze_data():
         # Get uploaded files and data
         audio_file = request.files['audio']
         motion_data_str = request.form['motion_data']
+        user_id = request.form.get('user_id', None)  # NEW: Get user_id if provided
         
         # Enhanced audio file validation
         if audio_file.filename == '':
@@ -804,7 +808,15 @@ def analyze_data():
 
         # Process data through ML pipeline
         print("\n🔄 Starting ML Pipeline Analysis...")
-        results = ml_pipeline.analyze(audio_path, motion_data)
+        
+        # NEW: Create pipeline with user_id if provided (enables personalized model)
+        if user_id:
+            logger.info(f"🎯 Using personalized model for user: {user_id}")
+            analysis_pipeline = ParkinsonMLPipeline(user_id=user_id)
+        else:
+            analysis_pipeline = ml_pipeline  # Use global pipeline
+        
+        results = analysis_pipeline.analyze(audio_path, motion_data)
         
         # Log detailed features (matching CSV structure)
         print("\n" + "="*70)
@@ -1015,6 +1027,131 @@ def not_found(e):
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
+# ========================================================================
+# PERSONALIZED BASELINE CALIBRATION ENDPOINTS
+# ========================================================================
+
+@app.route('/api/calibration/status', methods=['GET'])
+def calibration_status():
+    """Check if user has completed baseline calibration"""
+    try:
+        user_id = request.args.get('user_id', 'default_user')
+        status = personalized_handler.get_user_status(user_id)
+        return jsonify(status)
+    except Exception as e:
+        logger.error(f"Error getting calibration status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/calibration/record', methods=['POST'])
+def calibration_record():
+    """Save a baseline (healthy) voice sample for personalized model"""
+    try:
+        user_id = request.form.get('user_id', 'default_user')
+        sample_index = int(request.form.get('sample_index', 0))
+        
+        # Get audio file
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            return jsonify({'error': 'Empty filename'}), 400
+        
+        # Save audio temporarily
+        temp_dir = 'temp_calibration'
+        os.makedirs(temp_dir, exist_ok=True)
+        timestamp = int(time.time() * 1000)
+        
+        # Handle WebM format
+        if audio_file.filename.lower().endswith('.webm'):
+            webm_path = os.path.join(temp_dir, f'baseline_{user_id}_{sample_index}_{timestamp}.webm')
+            audio_file.save(webm_path)
+            wav_path = webm_path.replace('.webm', '.wav')
+            
+            if not convert_webm_to_wav(webm_path, wav_path):
+                return jsonify({'error': 'Audio conversion failed'}), 500
+            
+            audio_path = wav_path
+            # Clean up WebM file
+            try:
+                os.remove(webm_path)
+            except:
+                pass
+        else:
+            audio_path = os.path.join(temp_dir, f'baseline_{user_id}_{sample_index}_{timestamp}.wav')
+            audio_file.save(audio_path)
+        
+        # Extract features
+        audio_features = audio_extractor.extract_features_fast(audio_path)
+        
+        # Check if silence detected
+        if audio_features.get('_silence_detected', False):
+            # Clean up
+            try:
+                os.remove(audio_path)
+            except:
+                pass
+            return jsonify({
+                'error': 'No sound detected',
+                'message': 'Please speak clearly into the microphone during recording'
+            }), 400
+        
+        # Save baseline sample
+        personalized_handler.save_baseline_sample(user_id, audio_features, sample_index)
+        
+        # Clean up audio file
+        try:
+            os.remove(audio_path)
+        except:
+            pass
+        
+        logger.info(f"Saved baseline sample {sample_index} for user {user_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Baseline sample {sample_index} saved successfully',
+            'sample_index': sample_index,
+            'user_id': user_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recording baseline: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/calibration/train', methods=['POST'])
+def calibration_train():
+    """Train personalized model from collected baseline samples"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default_user')
+        
+        result = personalized_handler.train_personalized_model(user_id, min_samples=3)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+        
+    except Exception as e:
+        logger.error(f"Error training personalized model: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/calibration/reset', methods=['POST'])
+def calibration_reset():
+    """Delete user's calibration data (reset)"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default_user')
+        
+        result = personalized_handler.delete_user_data(user_id)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error resetting calibration: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ========================================================================
+
 # OPTIONS preflight handled by ngrok proxy - no need for manual handler
 
 if __name__ == '__main__':
@@ -1027,9 +1164,13 @@ if __name__ == '__main__':
     print("  * Ensemble of 4 algorithms: SVM, RF, GBM, XGBoost")
     print("  * Processing time: 3-5 seconds (prioritizes accuracy)")
     print("\nAPI Endpoints:")
-    print("  * GET  /api/health       - Health check")
-    print("  * POST /api/analyze      - Main ML analysis endpoint (real ML)")
-    print("  * GET  /api/models/info  - Model information")
+    print("  * GET  /api/health                - Health check")
+    print("  * POST /api/analyze               - Main ML analysis endpoint (real ML)")
+    print("  * GET  /api/models/info           - Model information")
+    print("  * GET  /api/calibration/status    - Check baseline calibration status")
+    print("  * POST /api/calibration/record    - Save baseline voice sample")
+    print("  * POST /api/calibration/train     - Train personalized model")
+    print("  * POST /api/calibration/reset     - Reset user calibration")
     print("\nServer starting on http://localhost:5000")
     print("="*70 + "\n")
     

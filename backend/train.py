@@ -92,7 +92,10 @@ for idx, row in voice_labels_df.iterrows():
         features.pop('_insights', None)
         features.pop('_silence_detected', None)
         features.pop('_silence_metrics', None)
-        feature_vector = np.array(list(features.values()), dtype=np.float64)
+        
+        # CRITICAL: Sort keys to ensure consistent order matching all_feature_names
+        sorted_keys = sorted(features.keys())
+        feature_vector = np.array([features[k] for k in sorted_keys], dtype=np.float64)
         
         # Validate feature vector
         if np.any(np.isnan(feature_vector)) or np.any(np.isinf(feature_vector)):
@@ -212,7 +215,15 @@ selected_indices = selector.get_support(indices=True)
 # Get feature names (assuming order from extractor)
 # We need to reconstruct the feature names list to save it
 dummy_features = audio_extractor._get_default_features()
+# Remove metadata keys to match X_voice columns
+dummy_features.pop('_insights', None)
+dummy_features.pop('_silence_detected', None)
+dummy_features.pop('_silence_metrics', None)
+
 all_feature_names = sorted(dummy_features.keys())
+selected_feature_names = [all_feature_names[i] for i in selected_indices]
+
+print(f"  • Selected {len(selected_feature_names)} features from {X_voice.shape[1]}")
 selected_feature_names = [all_feature_names[i] for i in selected_indices]
 
 print(f"  • Selected {len(selected_feature_names)} features from {X_voice.shape[1]}")

@@ -194,9 +194,9 @@ class OptimizedAudioExtractor:
             
             # Determine if silent based on multiple criteria
             is_silent = (
-                rms_db < -40 or  # Very low volume
-                energy < 0.001 or  # Minimal energy
-                voiced_percent < 5  # Less than 5% voiced content
+                rms_db < -50 or  # Very low volume (relaxed from -40)
+                energy < 0.0001 or  # Minimal energy (relaxed from 0.001)
+                voiced_percent < 1  # Less than 1% voiced content (relaxed from 5%)
             )
             
             metrics = {
