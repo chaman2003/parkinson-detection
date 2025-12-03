@@ -1305,6 +1305,19 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Check for insufficient data / idle detection
         const isInsufficient = results.prediction === 'Insufficient Data' || results.confidence < 10;
         
+        // Calculate the badge value (use risk_score if available, otherwise calculate from confidence)
+        let badgeValue;
+        if (results.risk_score !== undefined) {
+            badgeValue = Math.round(results.risk_score);
+        } else {
+            // Fallback: For healthy results, risk = 100 - confidence
+            if (results.prediction === 'Not Affected') {
+                badgeValue = Math.round(Math.max(0, 100 - results.confidence));
+            } else {
+                badgeValue = Math.round(results.confidence);
+            }
+        }
+        
         // Set result type and styling
         if (isInsufficient) {
             // Very low confidence - idle/baseline detected
@@ -1319,14 +1332,14 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             indicator.querySelector('.result-icon').textContent = '⚠️';
             title.textContent = 'Attention Required';
             subtitle.textContent = 'Analysis suggests possible Parkinson\'s indicators detected';
-            mainBadge.textContent = `${Math.round(results.confidence)}% Detection Confidence`;
+            mainBadge.textContent = `${badgeValue}% Detection Risk`;
             mainBadge.style.background = '';
         } else {
             indicator.className = 'result-indicator negative';
             indicator.querySelector('.result-icon').textContent = '✅';
             title.textContent = 'No Indicators Detected';
             subtitle.textContent = 'Analysis shows normal patterns - No concerns identified';
-            mainBadge.textContent = `${Math.round(results.confidence)}% Confidence`;
+            mainBadge.textContent = `${badgeValue}% Risk`;
             mainBadge.style.background = '';
         }
 
