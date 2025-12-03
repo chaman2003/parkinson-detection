@@ -1448,30 +1448,31 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             voiceFeaturesSection.style.display = 'block';
             voiceFeaturesGrid.innerHTML = '';
             
-            // Get raw audio features for detailed display
-            const rawAudioFeatures = results.audio_features || results.raw_features || {};
-            console.log('Raw Audio Features:', rawAudioFeatures);
+            // Get features dictionary (the simplified features for display)
+            const featuresDict = results.features || {};
+            console.log('Simplified Features:', featuresDict);
             
+            // Convert to array and limit to top 20 features
             let voiceFeatures = [];
-            const featureKeys = Object.keys(rawAudioFeatures);
+            const featureKeys = Object.keys(featuresDict);
 
-            // Check if we have a filtered set of features (likely from feature selection)
-            // If we have keys and they look like technical names (e.g. mfcc, chroma), display them dynamically
             if (featureKeys.length > 0) {
-                // Sort keys to group similar features
-                featureKeys.sort();
-                
-                featureKeys.forEach(key => {
-                    // Skip internal keys if any remain
-                    if (key.startsWith('_')) return;
-                    
-                    voiceFeatures.push({
+                // Sort by value (descending) to show most important features first
+                const sortedFeatures = featureKeys
+                    .map(key => ({
                         name: this.formatFeatureName(key),
                         icon: this.getFeatureIcon(key),
-                        value: rawAudioFeatures[key],
+                        value: featuresDict[key],
                         unit: ''
-                    });
-                });
+                    }))
+                    .sort((a, b) => {
+                        const aVal = typeof a.value === 'number' ? a.value : 0;
+                        const bVal = typeof b.value === 'number' ? b.value : 0;
+                        return Math.abs(bVal) - Math.abs(aVal); // Sort by absolute value descending
+                    })
+                    .slice(0, 20); // Limit to top 20 features
+                
+                voiceFeatures = sortedFeatures;
             } else {
                 // Fallback to default list if no features returned
                 voiceFeatures = [
@@ -1484,7 +1485,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 featureCard.className = 'feature-item';
                 featureCard.style.animationDelay = `${index * 0.05}s`;
                 
-                const displayValue = typeof feature.value === 'number' ? feature.value.toFixed(4) : feature.value;
+                const displayValue = typeof feature.value === 'number' ? feature.value.toFixed(2) : feature.value;
                 
                 featureCard.innerHTML = `
                     <div class="feature-item-icon">${feature.icon}</div>
@@ -1496,7 +1497,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 voiceFeatureCount++;
             });
             
-            document.getElementById('voice-feature-count').textContent = `${voiceFeatureCount} features`;
+            document.getElementById('voice-feature-count').textContent = `Top ${voiceFeatureCount} features`;
         } else {
             voiceFeaturesSection.style.display = 'none';
         }
@@ -1513,25 +1514,36 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const rawTremorFeatures = results.tremor_features || results.raw_features || {};
             console.log('Raw Tremor Features:', rawTremorFeatures);
             
-            // Only show features that match what's displayed during recording (like in the screenshot)
-            const tremorFeatures = [
-                // Row 1 - Main metrics
-                { name: 'Tremor\nFrequency', icon: '📳', value: rawTremorFeatures.magnitude_fft_dom_freq || 0, unit: 'Hz' },
-                { name: 'Postural\nStability', icon: '⚖️', value: results.features?.['Postural Stability'] || 0, unit: '%' },
-                { name: 'Motion\nVariability', icon: '💫', value: results.features?.['Motion Variability'] || 0, unit: '%' },
-                { name: 'Acceleration\nMagnitude', icon: '📊', value: rawTremorFeatures.magnitude_mean || 0, unit: 'm/s²' },
+            // Convert to array and limit to top 20 features
+            let tremorFeatures = [];
+            const featureKeys = Object.keys(rawTremorFeatures);
+
+            if (featureKeys.length > 0) {
+                // Create feature objects with icons
+                const allFeatures = featureKeys
+                    .filter(key => !key.startsWith('_')) // Skip internal keys
+                    .map(key => ({
+                        name: this.formatFeatureName(key),
+                        icon: this.getFeatureIcon(key),
+                        value: rawTremorFeatures[key],
+                        unit: key.includes('freq') ? 'Hz' : 
+                              key.includes('power') ? 'power' :
+                              key.includes('index') ? 'index' :
+                              key.includes('rate') ? 'rate' : ''
+                    }))
+                    .sort((a, b) => {
+                        const aVal = typeof a.value === 'number' ? a.value : 0;
+                        const bVal = typeof b.value === 'number' ? b.value : 0;
+                        return Math.abs(bVal) - Math.abs(aVal); // Sort by absolute value descending
+                    })
+                    .slice(0, 20); // Limit to top 20 features
                 
-                // Row 2 - Additional metrics
-                { name: 'Magnitude\nStd Dev', icon: '📈', value: rawTremorFeatures.magnitude_std || 0, unit: 'm/s²' },
-                { name: 'Magnitude\nRMS', icon: '⚡', value: rawTremorFeatures.magnitude_rms || 0, unit: 'm/s²' },
-                { name: 'Tremor Band\nPower (4-6Hz)', icon: '🎯', value: rawTremorFeatures.tremor_band_power_mag || 0, unit: 'power' },
-                { name: 'Stability\nIndex', icon: '⚖️', value: rawTremorFeatures.stability_index || 0, unit: 'index' },
-                
-                // Row 3 - Advanced metrics
-                { name: 'Total FFT\nPower', icon: '🔋', value: rawTremorFeatures.magnitude_fft_tot_power || 0, unit: 'power' },
-                { name: 'Peak\nRate', icon: '📍', value: rawTremorFeatures.magnitude_peaks_rt || 0, unit: 'rate' },
-                { name: 'Sample\nEntropy', icon: '🔢', value: rawTremorFeatures.magnitude_sampen || 0, unit: 'entropy' }
-            ];
+                tremorFeatures = allFeatures;
+            } else {
+                tremorFeatures = [
+                    { name: 'No Features', icon: '❓', value: 0, unit: '' }
+                ];
+            }
             
             tremorFeatures.forEach((feature, index) => {
                 const featureCard = document.createElement('div');
@@ -1550,7 +1562,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 tremorFeatureCount++;
             });
             
-            document.getElementById('tremor-feature-count').textContent = `${tremorFeatureCount} features`;
+            document.getElementById('tremor-feature-count').textContent = `Top ${tremorFeatureCount} features`;
         } else {
             tremorFeaturesSection.style.display = 'none';
         }
