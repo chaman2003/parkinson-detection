@@ -1214,6 +1214,76 @@
         "Voice Stability": 0.0,
         "Voice Quality": 73.7
       }
+    },
+    {
+      "recording_id": "voice_20251203_205013_615710",
+      "timestamp": "2025-12-03T20:50:13.618514",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251203_205013_615710.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 28.71,
+      "voice_confidence": 28.71,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 100.0
+      }
+    },
+    {
+      "recording_id": "voice_20251203_205030_036231",
+      "timestamp": "2025-12-03T20:50:30.038512",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251203_205030_036231.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 31.49,
+      "voice_confidence": 31.49,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 0.0,
+        "Voice Quality": 100.0
+      }
+    },
+    {
+      "recording_id": "voice_20251203_205053_734441",
+      "timestamp": "2025-12-03T20:50:53.736369",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251203_205053_734441.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251203_205130_371858",
+      "timestamp": "2025-12-03T20:51:30.373608",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251203_205130_371858.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
+    },
+    {
+      "recording_id": "voice_20251203_205154_345997",
+      "timestamp": "2025-12-03T20:51:54.348568",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251203_205154_345997.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 5.0,
+      "voice_confidence": 5.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 33.3
+      }
     }
   ],
   "tremor_recordings": [
@@ -1686,7 +1756,7 @@
       "user_label": null
     }
   ],
-  "total_recordings": 141,
+  "total_recordings": 146,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",

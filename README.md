@@ -128,7 +128,7 @@ parkinson-detection/
 │   │   ├── dataset_matcher.py       # Sample matching
 │   │   └── __pycache__/
 │   ├── datasets/
-│   │   ├── voice_dataset/           # Voice recordings (healthy, parkinsons, real-healthy)
+	│   │   ├── voice_dataset/           # Voice recordings (healthy, parkinsons)
 │   │   ├── voice_labels.csv         # Voice labels & metadata
 │   │   └── tremor_simplified.csv    # Tremor features dataset
 │   ├── models/                      # Trained ML models (.pkl files)
@@ -384,7 +384,7 @@ python train.py
 
 ### Custom Dataset
 Place your data in:
-- `datasets/voice_dataset/{healthy,parkinsons,real-healthy}/` (audio files)
+- `datasets/voice_dataset/{healthy,parkinsons}/` (audio files)
 - `datasets/tremor_simplified.csv` (tremor features)
 - Run `python train.py` to retrain
 
