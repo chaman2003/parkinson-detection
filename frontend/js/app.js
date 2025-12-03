@@ -1448,33 +1448,53 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             voiceFeaturesSection.style.display = 'block';
             voiceFeaturesGrid.innerHTML = '';
             
-            // Get full audio features dictionary for display (not just key features)
-            const featuresDict = results.audio_features || results.features || {};
-            console.log('Voice Features:', featuresDict);
+            // Get full audio features dictionary for display
+            const rawAudioFeatures = results.audio_features || {};
+            console.log('Voice Features:', rawAudioFeatures);
             
-            // Convert to array and ALWAYS show exactly MAX_FEATURES_PER_SECTION voice features
+            // Normalize and scale audio features to 0-100 for readability
             let voiceFeatures = [];
-            const featureKeys = Object.keys(featuresDict);
+            const featureKeys = Object.keys(rawAudioFeatures);
 
             if (featureKeys.length > 0) {
-                // Sort by value (descending) to show most important features first
-                const sortedFeatures = featureKeys
-                    .map(key => ({
-                        name: this.formatFeatureName(key),
-                        icon: this.getFeatureIcon(key),
-                        value: featuresDict[key],
-                        unit: ''
-                    }))
-                    .sort((a, b) => {
-                        const aVal = typeof a.value === 'number' ? a.value : 0;
-                        const bVal = typeof b.value === 'number' ? b.value : 0;
-                        return Math.abs(bVal) - Math.abs(aVal); // Sort by absolute value descending
+                // Map features with normalized values and readable names
+                const normalizedFeatures = featureKeys
+                    .map(key => {
+                        const rawValue = rawAudioFeatures[key];
+                        let normalizedValue = 0;
+                        let displayValue = rawValue;
+                        
+                        // Normalize different types of features to 0-100 scale
+                        if (key.includes('pitch')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 220, 1) * 100; // Normalize pitch
+                        } else if (key.includes('mfcc')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100; // MFCC normalization
+                        } else if (key.includes('hnr')) {
+                            normalizedValue = Math.max(0, Math.min((rawValue + 10) / 30, 1)) * 100; // HNR
+                        } else if (key.includes('energy') || key.includes('rms')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 1, 1) * 100; // Energy/RMS
+                        } else if (key.includes('zcr')) {
+                            normalizedValue = Math.min(rawValue / 0.5, 1) * 100; // ZCR
+                        } else if (key.includes('spectral')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 5000, 1) * 100; // Spectral
+                        } else {
+                            // Default normalization for unknown features
+                            normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
+                        }
+                        
+                        return {
+                            name: this.formatFeatureName(key),
+                            icon: this.getFeatureIcon(key),
+                            value: normalizedValue,
+                            rawValue: rawValue,
+                            unit: '%'
+                        };
                     })
-                    .slice(0, MAX_FEATURES_PER_SECTION); // ALWAYS show exactly 20 features
+                    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)) // Sort by importance
+                    .slice(0, MAX_FEATURES_PER_SECTION); // Take top 20
                 
-                voiceFeatures = sortedFeatures;
+                voiceFeatures = normalizedFeatures;
             } else {
-                // Fallback to default list if no features returned
                 voiceFeatures = [
                     { name: 'No Features', icon: '❓', value: 0, unit: '' }
                 ];
@@ -1485,7 +1505,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 featureCard.className = 'feature-item';
                 featureCard.style.animationDelay = `${index * 0.05}s`;
                 
-                const displayValue = typeof feature.value === 'number' ? feature.value.toFixed(2) : feature.value;
+                // Use normalized value (0-100) for display
+                const displayValue = feature.value.toFixed(1);
                 
                 featureCard.innerHTML = `
                     <div class="feature-item-icon">${feature.icon}</div>
@@ -1497,7 +1518,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 voiceFeatureCount++;
             });
             
-            // Always show "Voice: 20/20 features" when displaying voice features (whether voice-only or complete)
+            // Always show "Voice: 20/20 features" when displaying voice features
             document.getElementById('voice-feature-count').textContent = `Voice: ${Math.min(voiceFeatureCount, MAX_FEATURES_PER_SECTION)}/${MAX_FEATURES_PER_SECTION} features`;
         } else {
             voiceFeaturesSection.style.display = 'none';
@@ -1515,31 +1536,53 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const rawTremorFeatures = results.tremor_features || results.raw_features || {};
             console.log('Raw Tremor Features:', rawTremorFeatures);
             
-            // Convert to array and ALWAYS show exactly MAX_FEATURES_PER_SECTION tremor features
+            // Normalize and scale tremor features to 0-100 for readability
             let tremorFeatures = [];
             const featureKeys = Object.keys(rawTremorFeatures);
 
             if (featureKeys.length > 0) {
-                // Create feature objects with icons
-                const allFeatures = featureKeys
+                // Map features with normalized values and readable names
+                const normalizedFeatures = featureKeys
                     .filter(key => !key.startsWith('_')) // Skip internal keys
-                    .map(key => ({
-                        name: this.formatFeatureName(key),
-                        icon: this.getFeatureIcon(key),
-                        value: rawTremorFeatures[key],
-                        unit: key.includes('freq') ? 'Hz' : 
-                              key.includes('power') ? 'power' :
-                              key.includes('index') ? 'index' :
-                              key.includes('rate') ? 'rate' : ''
-                    }))
-                    .sort((a, b) => {
-                        const aVal = typeof a.value === 'number' ? a.value : 0;
-                        const bVal = typeof b.value === 'number' ? b.value : 0;
-                        return Math.abs(bVal) - Math.abs(aVal); // Sort by absolute value descending
+                    .map(key => {
+                        const rawValue = rawTremorFeatures[key];
+                        let normalizedValue = 0;
+                        let unit = '';
+                        
+                        // Normalize different types of tremor features
+                        if (key.includes('freq') || key.includes('frequency')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100; // Frequency normalization
+                            unit = 'Hz';
+                        } else if (key.includes('magnitude') || key.includes('amplitude')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100; // Magnitude
+                            unit = '';
+                        } else if (key.includes('power')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100; // Power
+                            unit = '';
+                        } else if (key.includes('entropy') || key.includes('complexity')) {
+                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100; // Entropy
+                            unit = '';
+                        } else if (key.includes('dfa')) {
+                            normalizedValue = Math.min(Math.abs(rawValue), 1) * 100; // DFA
+                            unit = '';
+                        } else {
+                            // Default normalization
+                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                            unit = '';
+                        }
+                        
+                        return {
+                            name: this.formatFeatureName(key),
+                            icon: this.getFeatureIcon(key),
+                            value: normalizedValue,
+                            rawValue: rawValue,
+                            unit: unit || '%'
+                        };
                     })
-                    .slice(0, MAX_FEATURES_PER_SECTION); // ALWAYS show exactly 20 features
+                    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)) // Sort by importance
+                    .slice(0, MAX_FEATURES_PER_SECTION); // Take top 20
                 
-                tremorFeatures = allFeatures;
+                tremorFeatures = normalizedFeatures;
             } else {
                 tremorFeatures = [
                     { name: 'No Features', icon: '❓', value: 0, unit: '' }
@@ -1551,7 +1594,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 featureCard.className = 'feature-item';
                 featureCard.style.animationDelay = `${index * 0.05}s`;
                 
-                const displayValue = typeof feature.value === 'number' ? feature.value.toFixed(2) : feature.value;
+                // Use normalized value (0-100) for display
+                const displayValue = feature.value.toFixed(1);
                 
                 featureCard.innerHTML = `
                     <div class="feature-item-icon">${feature.icon}</div>
@@ -1563,15 +1607,13 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 tremorFeatureCount++;
             });
             
-            // Always show "Tremor: 20/20 features" when displaying tremor features (whether tremor-only or complete)
+            // Always show "Tremor: 20/20 features" when displaying tremor features
             document.getElementById('tremor-feature-count').textContent = `Tremor: ${Math.min(tremorFeatureCount, MAX_FEATURES_PER_SECTION)}/${MAX_FEATURES_PER_SECTION} features`;
         } else {
             tremorFeaturesSection.style.display = 'none';
         }
 
         // Update total feature count in ML info
-        // For voice-only or tremor-only: 20 features
-        // For complete (both): 40 features (20 voice + 20 tremor)
         const totalFeatures = voiceFeatureCount + tremorFeatureCount;
         document.getElementById('feature-count-text').textContent = `${totalFeatures} parameters analyzed`;
     }
