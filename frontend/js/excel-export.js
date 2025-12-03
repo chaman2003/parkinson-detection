@@ -31,91 +31,145 @@ class ExcelExporter {
     }
 
     /**
+     * Helper: Check if value is valid (not 0, null, undefined, NaN, or 'N/A')
+     */
+    isValidValue(value) {
+        if (value === null || value === undefined || value === 'N/A') return false;
+        if (typeof value === 'number' && (isNaN(value) || value === 0)) return false;
+        if (typeof value === 'string' && value.trim() === '') return false;
+        return true;
+    }
+
+    /**
+     * Helper: Format feature name for display
+     */
+    formatFeatureName(key) {
+        return key
+            .replace(/_/g, ' ')
+            .replace(/mfcc/gi, 'MFCC')
+            .replace(/rms/gi, 'RMS')
+            .replace(/zcr/gi, 'ZCR')
+            .replace(/hnr/gi, 'HNR')
+            .replace(/fft/gi, 'FFT')
+            .replace(/std/gi, 'Std Dev')
+            .replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    /**
+     * Helper: Add row only if value is valid
+     */
+    addRowIfValid(data, label, value, unit = '') {
+        if (this.isValidValue(value)) {
+            const formattedValue = typeof value === 'number' ? 
+                (Math.abs(value) < 0.01 ? value.toExponential(2) : value.toFixed(4)) : value;
+            data.push([label, unit ? `${formattedValue} ${unit}` : formattedValue]);
+        }
+    }
+
+    /**
      * Generate simple report (PDF-style formatted Excel)
      */
     async exportSimpleReport(results, testMode) {
         await this.loadSheetJS();
 
-        const timestamp = new Date().toISOString();
         const data = [
             ['Parkinson\'s Detection - Analysis Report'],
             [''],
-            ['Test Information'],
-            ['Date & Time:', new Date().toLocaleString()],
-            ['Test Mode:', testMode.toUpperCase()],
-            ['Test ID:', this.generateTestId()],
+            ['TEST INFORMATION'],
+            ['Date & Time', new Date().toLocaleString()],
+            ['Test Mode', testMode.toUpperCase()],
+            ['Test ID', this.generateTestId()],
             [''],
-            ['Results Summary'],
-            ['Prediction:', results.prediction || 'N/A'],
-            ['Overall Confidence:', `${Math.round(results.confidence || 0)}%`],
-            [''],
+            ['RESULTS SUMMARY'],
+            ['Prediction', results.prediction || 'N/A']
         ];
 
+        // Add confidence only if valid
+        this.addRowIfValid(data, 'Overall Confidence', results.confidence, '%');
+        this.addRowIfValid(data, 'Risk Score', results.risk_score, '%');
+        data.push(['']);
+
+        // Voice Analysis Section
         if (testMode === 'voice' || testMode === 'both') {
-            data.push(
-                ['Voice Analysis'],
-                ['Voice Patterns:', `${Math.round(results.voice_patterns || results.voice_confidence || 0)}%`],
-                ['Voice Confidence:', `${Math.round(results.voice_confidence || 0)}%`],
-                ['Audio Duration:', `${results.metadata?.audio_duration || 0} seconds`],
-                ['']
-            );
+            const hasVoiceData = this.isValidValue(results.voice_patterns) || 
+                                 this.isValidValue(results.voice_confidence) ||
+                                 (results.audio_features && Object.keys(results.audio_features).length > 0);
             
-            // Add key voice features if available
-            if (results.audio_features) {
-                data.push(
-                    ['Key Voice Features'],
-                    ['Pitch Mean:', `${results.audio_features.pitch_mean?.toFixed(2) || 'N/A'} Hz`],
-                    ['Pitch Std Dev:', `${results.audio_features.pitch_std?.toFixed(2) || 'N/A'} Hz`],
-                    ['Jitter:', `${results.audio_features.jitter_local?.toFixed(4) || 'N/A'}`],
-                    ['Shimmer:', `${results.audio_features.shimmer_local?.toFixed(4) || 'N/A'}`],
-                    ['HNR:', `${results.audio_features.hnr_mean?.toFixed(2) || 'N/A'} dB`],
-                    ['']
-                );
+            if (hasVoiceData) {
+                data.push(['VOICE ANALYSIS']);
+                this.addRowIfValid(data, 'Voice Patterns', results.voice_patterns, '%');
+                this.addRowIfValid(data, 'Voice Confidence', results.voice_confidence, '%');
+                
+                // Add ALL voice features from audio_features
+                if (results.audio_features) {
+                    data.push([''], ['Voice Features']);
+                    const audioFeatures = results.audio_features;
+                    
+                    // Sort keys and add all valid features
+                    Object.keys(audioFeatures).sort().forEach(key => {
+                        const value = audioFeatures[key];
+                        if (this.isValidValue(value)) {
+                            const unit = key.includes('freq') || key.includes('pitch') || key.includes('centroid') ? 'Hz' :
+                                        key.includes('energy') || key.includes('power') ? '' :
+                                        key.includes('hnr') ? 'dB' : '';
+                            this.addRowIfValid(data, this.formatFeatureName(key), value, unit);
+                        }
+                    });
+                }
+                data.push(['']);
             }
         }
 
+        // Tremor Analysis Section
         if (testMode === 'tremor' || testMode === 'both') {
-            data.push(
-                ['Tremor Analysis'],
-                ['Motion Patterns:', `${Math.round(results.motion_patterns || results.tremor_confidence || 0)}%`],
-                ['Tremor Confidence:', `${Math.round(results.tremor_confidence || 0)}%`],
-                ['Motion Samples:', results.metadata?.motion_samples || 0],
-                ['']
-            );
+            const hasTremorData = this.isValidValue(results.motion_patterns) || 
+                                  this.isValidValue(results.tremor_confidence) ||
+                                  (results.tremor_features && Object.keys(results.tremor_features).length > 0);
             
-            // Add key tremor features if available
-            if (results.tremor_features) {
-                data.push(
-                    ['Key Tremor Features'],
-                    ['Acceleration Magnitude:', `${results.tremor_features.magnitude_mean?.toFixed(2) || 'N/A'} m/s²`],
-                    ['Tremor Frequency:', `${results.tremor_features.magnitude_fft_dom_freq?.toFixed(2) || 'N/A'} Hz`],
-                    ['Tremor Band Power (4-6Hz):', `${results.tremor_features.tremor_band_power_mag?.toFixed(4) || 'N/A'}`],
-                    ['Motion Variability:', `${results.tremor_features.magnitude_std?.toFixed(2) || 'N/A'}`],
-                    ['Stability Index:', `${results.tremor_features.stability_index?.toFixed(4) || 'N/A'}`],
-                    ['Sample Entropy:', `${results.tremor_features.magnitude_sampen?.toFixed(2) || 'N/A'}`],
-                    ['']
-                );
+            if (hasTremorData) {
+                data.push(['TREMOR ANALYSIS']);
+                this.addRowIfValid(data, 'Motion Patterns', results.motion_patterns, '%');
+                this.addRowIfValid(data, 'Tremor Confidence', results.tremor_confidence, '%');
+                
+                // Add ALL tremor features
+                if (results.tremor_features) {
+                    data.push([''], ['Tremor Features']);
+                    const tremorFeatures = results.tremor_features;
+                    
+                    // Sort keys and add all valid features
+                    Object.keys(tremorFeatures).sort().forEach(key => {
+                        if (key.startsWith('_')) return; // Skip internal keys
+                        const value = tremorFeatures[key];
+                        if (this.isValidValue(value)) {
+                            const unit = key.includes('freq') ? 'Hz' :
+                                        key.includes('power') || key.includes('energy') ? '' :
+                                        key.includes('jerk') ? 'm/s³' :
+                                        key.includes('magnitude') && !key.includes('fft') ? 'm/s²' : '';
+                            this.addRowIfValid(data, this.formatFeatureName(key), value, unit);
+                        }
+                    });
+                }
+                data.push(['']);
             }
         }
 
+        // Metadata
+        data.push(['PROCESSING DETAILS']);
+        this.addRowIfValid(data, 'Processing Time', results.metadata?.processing_time, 'seconds');
+        this.addRowIfValid(data, 'Audio Features Count', results.metadata?.audio_features_count);
+        this.addRowIfValid(data, 'Tremor Features Count', results.metadata?.tremor_features_count);
+        this.addRowIfValid(data, 'Motion Samples', results.metadata?.motion_samples);
+        data.push(['Model Version', results.metadata?.model_version || '1.0.0']);
+        
         data.push(
-            ['Machine Learning Details'],
-            ['Processing Time:', `${results.metadata?.processing_time || 0} seconds`],
-            ['Model Version:', results.metadata?.model_version || 'N/A'],
-            ['Algorithms Used:', 'SVM, Random Forest, Gradient Boosting, XGBoost'],
             [''],
-            ['Disclaimer'],
+            ['DISCLAIMER'],
             ['This is a research tool and not a medical diagnosis.'],
             ['Please consult healthcare professionals for proper evaluation.']
         );
 
         const ws = XLSX.utils.aoa_to_sheet(data);
-        
-        // Set column widths
-        ws['!cols'] = [
-            { wch: 25 },
-            { wch: 40 }
-        ];
+        ws['!cols'] = [{ wch: 35 }, { wch: 45 }];
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Report');
@@ -132,20 +186,21 @@ class ExcelExporter {
 
         const wb = XLSX.utils.book_new();
 
-        // Summary Sheet
+        // Summary Sheet (always included)
         this.addSummarySheet(wb, results, testMode);
 
         // Voice Features Sheet (if applicable)
-        if ((testMode === 'voice' || testMode === 'both') && rawData.voiceData) {
-            this.addVoiceFeaturesSheet(wb, rawData.voiceData, results);
+        if (testMode === 'voice' || testMode === 'both') {
+            this.addVoiceFeaturesSheet(wb, results);
         }
 
         // Tremor Features Sheet (if applicable)
-        if ((testMode === 'tremor' || testMode === 'both') && rawData.tremorData) {
-            this.addTremorFeaturesSheet(wb, rawData.tremorData, results);
+        if (testMode === 'tremor' || testMode === 'both') {
+            this.addTremorFeaturesSheet(wb, results);
         }
 
-        // Raw Motion Data Sheet REMOVED - not needed in export
+        // All Features Sheet (complete raw data)
+        this.addAllFeaturesSheet(wb, results, testMode);
 
         XLSX.writeFile(wb, `Parkinson_Detailed_${this.getFilenameTimestamp()}.xlsx`);
         console.log('✅ Detailed data exported');
@@ -156,205 +211,246 @@ class ExcelExporter {
      */
     addSummarySheet(wb, results, testMode) {
         const data = [
-            ['Parkinson\'s Detection - Detailed Analysis'],
+            ['Parkinson\'s Detection - Detailed Analysis Summary'],
             [''],
+            ['TEST INFORMATION'],
             ['Test ID', this.generateTestId()],
             ['Timestamp', new Date().toISOString()],
             ['Test Mode', testMode.toUpperCase()],
             [''],
             ['ANALYSIS RESULTS'],
-            ['Prediction', results.prediction || 'N/A'],
-            ['Overall Confidence', `${(results.confidence || 0).toFixed(2)}%`]
+            ['Prediction', results.prediction || 'N/A']
         ];
 
-        // Add voice-specific results only if voice or both
+        this.addRowIfValid(data, 'Overall Confidence', results.confidence, '%');
+        this.addRowIfValid(data, 'Risk Score', results.risk_score, '%');
+
+        // Voice results
         if (testMode === 'voice' || testMode === 'both') {
-            data.push(
-                ['Voice Patterns', `${(results.voice_patterns || results.voice_confidence || 0).toFixed(2)}%`],
-                ['Voice Confidence', `${(results.voice_confidence || 0).toFixed(2)}%`]
-            );
+            this.addRowIfValid(data, 'Voice Patterns', results.voice_patterns, '%');
+            this.addRowIfValid(data, 'Voice Confidence', results.voice_confidence, '%');
         }
 
-        // Add tremor-specific results only if tremor or both
+        // Tremor results
         if (testMode === 'tremor' || testMode === 'both') {
-            data.push(
-                ['Motion Patterns', `${(results.motion_patterns || results.tremor_confidence || 0).toFixed(2)}%`],
-                ['Tremor Confidence', `${(results.tremor_confidence || 0).toFixed(2)}%`]
-            );
+            this.addRowIfValid(data, 'Motion Patterns', results.motion_patterns, '%');
+            this.addRowIfValid(data, 'Tremor Confidence', results.tremor_confidence, '%');
         }
 
-        data.push([''], ['METADATA'], ['Processing Time (s)', results.metadata?.processing_time || 0]);
-
-        // Add voice metadata only if voice or both
-        if (testMode === 'voice' || testMode === 'both') {
-            data.push(['Audio Duration (s)', results.metadata?.audio_duration || 0]);
-        }
-
-        // Add tremor metadata only if tremor or both
-        if (testMode === 'tremor' || testMode === 'both') {
-            data.push(
-                ['Motion Samples Count', results.metadata?.motion_samples || 0],
-                ['Sample Rate (Hz)', results.metadata?.sampling_rate || 100]
-            );
-        }
-
-        data.push(['Model Version', results.metadata?.model_version || 'N/A']);
+        data.push([''], ['METADATA']);
+        this.addRowIfValid(data, 'Processing Time', results.metadata?.processing_time, 'seconds');
+        this.addRowIfValid(data, 'Audio Features Count', results.metadata?.audio_features_count);
+        this.addRowIfValid(data, 'Tremor Features Count', results.metadata?.tremor_features_count);
+        this.addRowIfValid(data, 'Motion Samples', results.metadata?.motion_samples);
+        data.push(['Model Version', results.metadata?.model_version || '1.0.0']);
 
         const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = [{ wch: 30 }, { wch: 30 }];
-        
-        // Apply left alignment to all cells
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                if (!ws[cellAddress]) continue;
-                if (!ws[cellAddress].s) ws[cellAddress].s = {};
-                ws[cellAddress].s.alignment = { horizontal: 'left' };
-            }
-        }
-        
+        ws['!cols'] = [{ wch: 30 }, { wch: 35 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Summary');
     }
 
     /**
-     * Add voice features sheet (row-wise with linked results)
+     * Add voice features sheet with ALL audio features
      */
-    addVoiceFeaturesSheet(wb, voiceData, results) {
-        // ROW-WISE FORMAT: Each category becomes a row with value
+    addVoiceFeaturesSheet(wb, results) {
         const data = [
-            ['Parkinson\'s Voice Analysis - Detailed Results'],
+            ['Voice Analysis - All Features'],
             [''],
             ['ANALYSIS RESULTS'],
-            ['Prediction', results.prediction || 'N/A'],
-            ['Voice Confidence', `${(results.voice_confidence || 0).toFixed(2)}%`],
-            ['Voice Patterns', `${(results.voice_patterns || results.voice_confidence || 0).toFixed(2)}%`],
-            [''],
-            ['AUDIO METADATA'],
-            ['Audio Duration', `${(voiceData.duration || results.audio_features?.duration || results.metadata?.audio_duration || 0).toFixed(2)} seconds`],
-            ['Sample Rate', `${voiceData.sample_rate || results.audio_features?.sample_rate || 'N/A'} Hz`],
-            ['Test ID', this.generateTestId()],
-            ['Timestamp', new Date().toISOString()],
-            [''],
-            ['VOICE FEATURES (matching results display)'],
-            ['Voice Quality', `${(results.features?.['Voice Quality'] || 0).toFixed(2)}%`],
-            ['Pitch Mean', `${(voiceData.pitch_mean || 0).toFixed(2)} Hz`],
-            ['Pitch Std Deviation', `${(voiceData.pitch_std || 0).toFixed(2)} Hz`],
-            ['Pitch Range', `${(voiceData.pitch_range || 0).toFixed(2)} Hz`],
-            ['HNR (Harmonics)', `${(voiceData.hnr_mean || 0).toFixed(2)} dB`],
-            ['Spectral Centroid', `${(voiceData.spectral_centroid || 0).toFixed(2)} Hz`],
-            ['Spectral Rolloff', `${(voiceData.spectral_rolloff || 0).toFixed(2)} Hz`],
-            ['Speech Rate', `${(voiceData.speech_rate || 0).toFixed(2)} rate`],
-            ['Spectral Bandwidth', `${(voiceData.spectral_bandwidth || 0).toFixed(2)} Hz`],
-            [''],
-            ['DISCLAIMER'],
-            ['This is a research tool and not a medical diagnosis.'],
-            ['Please consult healthcare professionals for proper evaluation.']
+            ['Prediction', results.prediction || 'N/A']
         ];
 
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = [
-            { wch: 30 },  // Category/Feature name column
-            { wch: 40 }   // Value column
-        ];
+        this.addRowIfValid(data, 'Voice Confidence', results.voice_confidence, '%');
+        this.addRowIfValid(data, 'Voice Patterns', results.voice_patterns, '%');
 
-        // Apply left alignment to all cells
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                if (!ws[cellAddress]) continue;
-                if (!ws[cellAddress].s) ws[cellAddress].s = {};
-                ws[cellAddress].s.alignment = { horizontal: 'left' };
-            }
+        // Add ALL audio features
+        const audioFeatures = results.audio_features || {};
+        const featureCount = Object.keys(audioFeatures).filter(k => this.isValidValue(audioFeatures[k])).length;
+
+        if (featureCount > 0) {
+            data.push([''], [`VOICE FEATURES (${featureCount} total)`]);
+            
+            // Group features by category
+            const categories = {
+                'Pitch Features': [],
+                'MFCC Features': [],
+                'Spectral Features': [],
+                'Energy Features': [],
+                'Other Features': []
+            };
+
+            Object.keys(audioFeatures).sort().forEach(key => {
+                const value = audioFeatures[key];
+                if (!this.isValidValue(value)) return;
+
+                const unit = key.includes('freq') || key.includes('pitch') || key.includes('centroid') || key.includes('rolloff') || key.includes('bandwidth') ? 'Hz' :
+                            key.includes('hnr') ? 'dB' : '';
+                const row = [this.formatFeatureName(key), unit ? `${this.formatNumber(value)} ${unit}` : this.formatNumber(value)];
+
+                if (key.includes('pitch')) categories['Pitch Features'].push(row);
+                else if (key.includes('mfcc')) categories['MFCC Features'].push(row);
+                else if (key.includes('spectral') || key.includes('centroid') || key.includes('bandwidth') || key.includes('rolloff') || key.includes('contrast')) categories['Spectral Features'].push(row);
+                else if (key.includes('energy') || key.includes('rms') || key.includes('power')) categories['Energy Features'].push(row);
+                else categories['Other Features'].push(row);
+            });
+
+            // Add each category
+            Object.keys(categories).forEach(category => {
+                if (categories[category].length > 0) {
+                    data.push([''], [category]);
+                    categories[category].forEach(row => data.push(row));
+                }
+            });
         }
 
+        data.push(
+            [''],
+            ['DISCLAIMER'],
+            ['This is a research tool and not a medical diagnosis.']
+        );
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 35 }, { wch: 40 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Voice Features');
     }
 
     /**
-     * Add tremor features sheet (row-wise format, no tremor type columns)
+     * Add tremor features sheet with ALL tremor features
      */
-    addTremorFeaturesSheet(wb, tremorData, results) {
-        // ROW-WISE FORMAT: Each category becomes a row with value
+    addTremorFeaturesSheet(wb, results) {
         const data = [
-            ['Parkinson\'s Tremor Analysis - Detailed Results'],
+            ['Tremor Analysis - All Features'],
             [''],
             ['ANALYSIS RESULTS'],
-            ['Prediction', results.prediction || 'N/A'],
-            ['Tremor Confidence', `${(results.tremor_confidence || 0).toFixed(2)}%`],
-            ['Motion Patterns', `${(results.motion_patterns || results.tremor_confidence || 0).toFixed(2)}%`],
-            [''],
-            ['TEST METADATA'],
-            ['Test ID', this.generateTestId()],
-            ['Start Timestamp', tremorData.start_timestamp || new Date().toISOString()],
-            ['End Timestamp', tremorData.end_timestamp || new Date().toISOString()],
-            ['Motion Samples Count', results.metadata?.motion_samples || 0],
-            ['Sample Rate', `${results.metadata?.sampling_rate || 100} Hz`],
-            [''],
-            ['KEY METRICS'],
-            ['Tremor Frequency', `${(tremorData.magnitude_fft_dom_freq || 0).toFixed(2)} Hz`],
-            ['Tremor Frequency Score', `${(results.features?.['Tremor Frequency'] || 0).toFixed(2)}%`],
-            ['Postural Stability Score', `${(results.features?.['Postural Stability'] || 0).toFixed(2)}%`],
-            ['Motion Variability Score', `${(results.features?.['Motion Variability'] || 0).toFixed(2)}%`],
-            [''],
-            ['ACCELERATION FEATURES'],
-            ['Magnitude Mean', `${(tremorData.magnitude_mean || 0).toFixed(4)} m/s²`],
-            ['Magnitude Std Dev', `${(tremorData.magnitude_std_dev || 0).toFixed(4)} m/s²`],
-            ['Magnitude RMS', `${(tremorData.magnitude_rms || 0).toFixed(4)} m/s²`],
-            ['Magnitude Energy', `${(tremorData.magnitude_energy || 0).toFixed(4)}`],
-            ['Magnitude Max', `${(tremorData.magnitude_max || 0).toFixed(4)} m/s²`],
-            ['Magnitude Min', `${(tremorData.magnitude_min || 0).toFixed(4)} m/s²`],
-            ['Magnitude Range', `${(tremorData.magnitude_range || 0).toFixed(4)} m/s²`],
-            ['Magnitude Kurtosis', `${(tremorData.magnitude_kurtosis || 0).toFixed(4)}`],
-            ['Magnitude Skewness', `${(tremorData.magnitude_skewness || 0).toFixed(4)}`],
-            ['Coefficient of Variation', `${(tremorData.magnitude_cv || 0).toFixed(4)}`],
-            ['Peak Rate', `${(tremorData.magnitude_peaks_rt || 0).toFixed(4)}`],
-            ['Slope Sign Changes Rate', `${(tremorData.magnitude_ssc_rt || 0).toFixed(4)}`],
-            [''],
-            ['FREQUENCY FEATURES'],
-            ['Dominant Frequency', `${(tremorData.magnitude_fft_dom_freq || 0).toFixed(4)} Hz`],
-            ['Total FFT Power', `${(tremorData.magnitude_fft_tot_power || 0).toFixed(4)}`],
-            ['FFT Energy', `${(tremorData.magnitude_fft_energy || 0).toFixed(4)}`],
-            ['FFT Entropy', `${(tremorData.magnitude_fft_entropy || 0).toFixed(4)}`],
-            ['Tremor Band Power (4-6Hz)', `${(tremorData.tremor_band_power_mag || 0).toFixed(4)}`],
-            ['Tremor Peak Frequency', `${(tremorData.tremor_peak_freq || 0).toFixed(4)} Hz`],
-            ['Dominant Frequency X-axis', `${(tremorData.dominant_freq_x || 0).toFixed(4)} Hz`],
-            ['Tremor Band Power X-axis', `${(tremorData.tremor_band_power_x || 0).toFixed(4)}`],
-            [''],
-            ['TIME DOMAIN FEATURES'],
-            ['Zero Crossing Rate', `${(tremorData.zero_crossing_rate_mag || 0).toFixed(4)}`],
-            ['Peak Count', `${(tremorData.peak_count_mag || 0).toFixed(0)}`],
-            ['Jerk Mean', `${(tremorData.jerk_mean || 0).toFixed(4)} m/s³`],
-            ['Jerk Std Dev', `${(tremorData.jerk_std || 0).toFixed(4)} m/s³`],
-            [''],
-            ['STABILITY METRICS'],
-            ['Stability Index', `${(tremorData.stability_index || 0).toFixed(4)}`],
-            ['Sample Entropy', `${(tremorData.magnitude_sampen || 0).toFixed(4)}`],
+            ['Prediction', results.prediction || 'N/A']
+        ];
+
+        this.addRowIfValid(data, 'Tremor Confidence', results.tremor_confidence, '%');
+        this.addRowIfValid(data, 'Motion Patterns', results.motion_patterns, '%');
+
+        // Add ALL tremor features
+        const tremorFeatures = results.tremor_features || {};
+        const featureCount = Object.keys(tremorFeatures).filter(k => !k.startsWith('_') && this.isValidValue(tremorFeatures[k])).length;
+
+        if (featureCount > 0) {
+            data.push([''], [`TREMOR FEATURES (${featureCount} total)`]);
+            
+            // Group features by category
+            const categories = {
+                'Magnitude Statistics': [],
+                'Frequency Domain': [],
+                'Time Domain': [],
+                'Stability Metrics': [],
+                'Axis-Specific Features': [],
+                'Other Features': []
+            };
+
+            Object.keys(tremorFeatures).sort().forEach(key => {
+                if (key.startsWith('_')) return;
+                const value = tremorFeatures[key];
+                if (!this.isValidValue(value)) return;
+
+                const unit = key.includes('freq') ? 'Hz' :
+                            key.includes('jerk') ? 'm/s³' :
+                            (key.includes('magnitude') && !key.includes('fft') && !key.includes('power')) ? 'm/s²' : '';
+                const row = [this.formatFeatureName(key), unit ? `${this.formatNumber(value)} ${unit}` : this.formatNumber(value)];
+
+                if (key.includes('magnitude') && !key.includes('fft')) categories['Magnitude Statistics'].push(row);
+                else if (key.includes('fft') || key.includes('freq') || key.includes('power') || key.includes('band')) categories['Frequency Domain'].push(row);
+                else if (key.includes('zcr') || key.includes('peak') || key.includes('jerk') || key.includes('crossing')) categories['Time Domain'].push(row);
+                else if (key.includes('stability') || key.includes('entropy') || key.includes('sampen') || key.includes('dfa')) categories['Stability Metrics'].push(row);
+                else if (key.includes('_x') || key.includes('_y') || key.includes('_z')) categories['Axis-Specific Features'].push(row);
+                else categories['Other Features'].push(row);
+            });
+
+            // Add each category
+            Object.keys(categories).forEach(category => {
+                if (categories[category].length > 0) {
+                    data.push([''], [category]);
+                    categories[category].forEach(row => data.push(row));
+                }
+            });
+        }
+
+        data.push(
             [''],
             ['DISCLAIMER'],
-            ['This is a research tool and not a medical diagnosis.'],
-            ['Please consult healthcare professionals for proper evaluation.']
-        ];
+            ['This is a research tool and not a medical diagnosis.']
+        );
 
         const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = [
-            { wch: 35 },  // Feature name column
-            { wch: 40 }   // Value column
+        ws['!cols'] = [{ wch: 35 }, { wch: 40 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Tremor Features');
+    }
+
+    /**
+     * Add all features sheet (complete raw data in one place)
+     */
+    addAllFeaturesSheet(wb, results, testMode) {
+        const data = [
+            ['Complete Feature Export - All Raw Data'],
+            [''],
+            ['Test Mode', testMode.toUpperCase()],
+            ['Prediction', results.prediction || 'N/A'],
+            ['Timestamp', new Date().toISOString()],
+            ['']
         ];
 
-        // Apply left alignment to all cells
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                if (!ws[cellAddress]) continue;
-                if (!ws[cellAddress].s) ws[cellAddress].s = {};
-                ws[cellAddress].s.alignment = { horizontal: 'left' };
+        // Voice features
+        if (testMode === 'voice' || testMode === 'both') {
+            const audioFeatures = results.audio_features || {};
+            const validFeatures = Object.keys(audioFeatures).filter(k => this.isValidValue(audioFeatures[k]));
+            
+            if (validFeatures.length > 0) {
+                data.push([`VOICE FEATURES (${validFeatures.length})`]);
+                validFeatures.sort().forEach(key => {
+                    data.push([key, this.formatNumber(audioFeatures[key])]);
+                });
+                data.push(['']);
             }
         }
 
-        XLSX.utils.book_append_sheet(wb, ws, 'Tremor Features');
+        // Tremor features
+        if (testMode === 'tremor' || testMode === 'both') {
+            const tremorFeatures = results.tremor_features || {};
+            const validFeatures = Object.keys(tremorFeatures).filter(k => !k.startsWith('_') && this.isValidValue(tremorFeatures[k]));
+            
+            if (validFeatures.length > 0) {
+                data.push([`TREMOR FEATURES (${validFeatures.length})`]);
+                validFeatures.sort().forEach(key => {
+                    data.push([key, this.formatNumber(tremorFeatures[key])]);
+                });
+                data.push(['']);
+            }
+        }
+
+        // Key features (normalized 0-100)
+        if (results.features && Object.keys(results.features).length > 0) {
+            const keyFeatures = results.features;
+            const validFeatures = Object.keys(keyFeatures).filter(k => this.isValidValue(keyFeatures[k]));
+            
+            if (validFeatures.length > 0) {
+                data.push(['KEY FEATURES (Normalized 0-100)']);
+                validFeatures.sort().forEach(key => {
+                    data.push([key, `${this.formatNumber(keyFeatures[key])}%`]);
+                });
+            }
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 40 }, { wch: 30 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'All Features');
+    }
+
+    /**
+     * Format number for display
+     */
+    formatNumber(value) {
+        if (typeof value !== 'number') return value;
+        if (Math.abs(value) < 0.0001 && value !== 0) return value.toExponential(2);
+        if (Math.abs(value) >= 1000) return value.toFixed(2);
+        if (Number.isInteger(value)) return value.toString();
+        return value.toFixed(4);
     }
 
     /**
