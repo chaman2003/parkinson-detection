@@ -89,8 +89,8 @@
                             <p>Voice + Tremor Detection</p>
                             <span class="mode-badge recommended">Recommended</span>
                             <ul class="mode-features">
-                                <li>🎤 Voice recording (10 seconds)</li>
-                                <li>📱 Motion analysis (15 seconds)</li>
+                                <li>🎤 Voice recording (5 seconds)</li>
+                                <li>📱 Motion analysis (5 seconds)</li>
                                 <li>🔬 Comprehensive results</li>
                             </ul>
                         </div>
@@ -100,7 +100,7 @@
                             <h3>Voice Only</h3>
                             <p>Speech Pattern Analysis</p>
                             <ul class="mode-features">
-                                <li>🎤 Voice recording (10 seconds)</li>
+                                <li>🎤 Voice recording (5 seconds)</li>
                                 <li>📊 Speech rhythm analysis</li>
                                 <li>🔊 Vocal quality assessment</li>
                             </ul>
@@ -111,7 +111,7 @@
                             <h3>Tremor Only</h3>
                             <p>Motion Sensor Analysis</p>
                             <ul class="mode-features">
-                                <li>📱 Motion capture (15 seconds)</li>
+                                <li>📱 Motion capture (5 seconds)</li>
                                 <li>📈 Tremor frequency analysis</li>
                                 <li>⚖️ Stability assessment</li>
                             </ul>
@@ -139,7 +139,7 @@
                     <!-- Voice Test -->
                     <div id="voice-test" class="test-section">
                         <h2>Voice Test</h2>
-                        <p class="test-instruction">Please say "Hello, my name is..." and continue speaking for 10 seconds</p>
+                        <p class="test-instruction">Please say "Hello, my name is..." and continue speaking for 5 seconds</p>
                         <div class="recording-area">
                             <button id="voice-record-btn" class="btn btn-record">
                                 <span class="record-icon">🎤</span>
@@ -208,7 +208,7 @@
                     <!-- Tremor Test -->
                     <div id="tremor-test" class="test-section hidden">
                         <h2>Tremor Test</h2>
-                        <p class="test-instruction">Hold your phone steady with both hands for 15 seconds</p>
+                        <p class="test-instruction">Hold your phone steady with both hands for 5 seconds</p>
                         <div class="tremor-area">
                             <div class="phone-illustration">
                                 <div class="phone-shake-indicator"></div>
@@ -564,15 +564,15 @@
                         <div class="calibration-requirements">
                             <div class="requirement-item">
                                 <span class="req-icon">🎤</span>
-                                <span>3 voice recordings (10 sec each)</span>
+                                <span>3 voice recordings (5 sec each)</span>
                             </div>
                             <div class="requirement-item">
                                 <span class="req-icon">📱</span>
-                                <span>3 tremor recordings (15 sec each)</span>
+                                <span>3 tremor recordings (5 sec each)</span>
                             </div>
                             <div class="requirement-item">
                                 <span class="req-icon">⏱️</span>
-                                <span>~3 minutes total</span>
+                                <span>~1 minute total</span>
                             </div>
                         </div>
                         <button id="start-calibration-btn" class="btn btn-primary btn-large">
@@ -598,11 +598,11 @@
                                     <p>Ready to record</p>
                                 </div>
                             </div>
-                            <div class="recording-timer" id="calibration-voice-timer">10s</div>
+                            <div class="recording-timer" id="calibration-voice-timer">5s</div>
                         </div>
 
                         <p class="recording-instruction">
-                            Speak normally for 10 seconds. You can count, read, or describe your day.
+                            Speak normally for 5 seconds. You can count, read, or describe your day.
                         </p>
 
                         <button id="calibration-voice-record-btn" class="btn btn-record btn-large">
@@ -635,7 +635,7 @@
                                     <div class="axis z-axis"><span>Z:</span> <span id="cal-accel-z">0.00</span></div>
                                 </div>
                             </div>
-                            <div class="recording-timer" id="calibration-tremor-timer">15s</div>
+                            <div class="recording-timer" id="calibration-tremor-timer">5s</div>
                         </div>
 
                         <p class="recording-instruction">

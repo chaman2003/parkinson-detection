@@ -1952,7 +1952,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Reset timer
         const timerEl = document.getElementById('calibration-voice-timer');
         if (timerEl) {
-            timerEl.textContent = '10s';
+            timerEl.textContent = '5s';
             timerEl.classList.remove('active');
         }
         
@@ -1998,7 +1998,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Reset timer
         const timerEl = document.getElementById('calibration-tremor-timer');
         if (timerEl) {
-            timerEl.textContent = '15s';
+            timerEl.textContent = '5s';
             timerEl.classList.remove('active');
         }
         
@@ -2107,7 +2107,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             if (timerEl) {
                 timerEl.classList.add('active');
             }
-            let timeLeft = 10;
+            let timeLeft = 5;
             timerEl.textContent = `${timeLeft}s`;
             
             const timerInterval = setInterval(() => {
@@ -2122,7 +2122,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
             this.calibrationState.timerInterval = timerInterval;
             
-            // Safety timeout - force stop after 15 seconds in case something goes wrong
+            // Safety timeout - force stop after 8 seconds in case something goes wrong
             this.calibrationState.safetyTimeout = setTimeout(() => {
                 if (this.calibrationState.isCalibrating) {
                     console.warn('Safety timeout triggered - forcing stop');
@@ -2375,7 +2375,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Start countdown timer
         const timerEl = document.getElementById('calibration-tremor-timer');
         timerEl.classList.add('active');
-        let timeLeft = 15;
+        let timeLeft = 5;
         
         const timerInterval = setInterval(() => {
             timeLeft--;
@@ -2389,13 +2389,13 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         
         this.calibrationState.timerInterval = timerInterval;
         
-        // Safety timeout - force stop after 20 seconds in case something goes wrong
+        // Safety timeout - force stop after 8 seconds in case something goes wrong
         this.calibrationState.safetyTimeout = setTimeout(() => {
             if (this.calibrationState.isCalibrating) {
                 console.warn('Safety timeout triggered for tremor - forcing stop');
                 this.stopCalibrationTremorRecording();
             }
-        }, 20000);
+        }, 8000);
         
         this.showCalibrationStatus('calibration-tremor-status', 'Recording... Keep phone steady', 'info');
     }

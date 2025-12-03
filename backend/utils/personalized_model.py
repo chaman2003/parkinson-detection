@@ -16,6 +16,25 @@ import json
 logger = logging.getLogger(__name__)
 
 
+def sanitize_for_json(obj):
+    """Replace NaN/Inf values with 0 for JSON serialization"""
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, float):
+        if np.isnan(obj) or np.isinf(obj):
+            return 0.0
+        return obj
+    elif isinstance(obj, np.floating):
+        if np.isnan(obj) or np.isinf(obj):
+            return 0.0
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return sanitize_for_json(obj.tolist())
+    return obj
+
+
 class PersonalizedModelHandler:
     """Manages personalized baseline models for individual users"""
     
@@ -125,9 +144,13 @@ class PersonalizedModelHandler:
                 # Sort keys for consistency
                 sorted_keys = sorted(clean_sample.keys())
                 vector = np.array([clean_sample[k] for k in sorted_keys], dtype=np.float64)
+                # Replace NaN/Inf with 0
+                vector = np.nan_to_num(vector, nan=0.0, posinf=0.0, neginf=0.0)
                 feature_vectors.append(vector)
             
             X_baseline = np.array(feature_vectors)
+            # Ensure no NaN/Inf in the entire array
+            X_baseline = np.nan_to_num(X_baseline, nan=0.0, posinf=0.0, neginf=0.0)
             
             # Train scaler on baseline data
             scaler = StandardScaler()
@@ -145,14 +168,16 @@ class PersonalizedModelHandler:
             
             # Calculate baseline statistics for additional context
             baseline_stats = {
-                'mean': np.mean(X_baseline, axis=0).tolist(),
-                'std': np.std(X_baseline, axis=0).tolist(),
-                'min': np.min(X_baseline, axis=0).tolist(),
-                'max': np.max(X_baseline, axis=0).tolist(),
+                'mean': np.nan_to_num(np.mean(X_baseline, axis=0), nan=0.0).tolist(),
+                'std': np.nan_to_num(np.std(X_baseline, axis=0), nan=0.0).tolist(),
+                'min': np.nan_to_num(np.min(X_baseline, axis=0), nan=0.0).tolist(),
+                'max': np.nan_to_num(np.max(X_baseline, axis=0), nan=0.0).tolist(),
                 'feature_names': sorted_keys,
                 'num_samples': len(baseline_samples),
                 'trained_at': datetime.now().isoformat()
             }
+            # Ensure all values are JSON-serializable
+            baseline_stats = sanitize_for_json(baseline_stats)
             
             # Save model and metadata
             user_dir = os.path.join(self.storage_dir, user_id)
@@ -202,9 +227,13 @@ class PersonalizedModelHandler:
                 if sorted_keys is None:
                     sorted_keys = sorted(clean_sample.keys())
                 vector = np.array([clean_sample.get(k, 0) for k in sorted_keys], dtype=np.float64)
+                # Replace NaN/Inf with 0
+                vector = np.nan_to_num(vector, nan=0.0, posinf=0.0, neginf=0.0)
                 feature_vectors.append(vector)
             
             X_baseline = np.array(feature_vectors)
+            # Ensure no NaN/Inf in the entire array
+            X_baseline = np.nan_to_num(X_baseline, nan=0.0, posinf=0.0, neginf=0.0)
             
             # Train scaler
             scaler = StandardScaler()
@@ -226,14 +255,15 @@ class PersonalizedModelHandler:
             with open(os.path.join(user_dir, 'tremor_scaler.pkl'), 'wb') as f:
                 pickle.dump(scaler, f)
             
-            # Save tremor stats
+            # Save tremor stats (sanitized for JSON)
             tremor_stats = {
-                'mean': np.mean(X_baseline, axis=0).tolist(),
-                'std': np.std(X_baseline, axis=0).tolist(),
+                'mean': np.nan_to_num(np.mean(X_baseline, axis=0), nan=0.0).tolist(),
+                'std': np.nan_to_num(np.std(X_baseline, axis=0), nan=0.0).tolist(),
                 'feature_names': sorted_keys,
                 'num_samples': len(tremor_samples),
                 'trained_at': datetime.now().isoformat()
             }
+            tremor_stats = sanitize_for_json(tremor_stats)
             with open(os.path.join(user_dir, 'tremor_stats.json'), 'w') as f:
                 json.dump(tremor_stats, f, indent=2)
             
