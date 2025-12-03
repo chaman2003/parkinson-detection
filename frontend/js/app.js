@@ -90,6 +90,22 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             this.toggleVoiceRecording();
         });
 
+        // Audio file upload
+        const uploadBtn = document.getElementById('upload-audio-btn');
+        const fileInput = document.getElementById('audio-file-input');
+        
+        if (uploadBtn && fileInput) {
+            uploadBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.handleAudioFileUpload(e.target.files[0]);
+                }
+            });
+        }
+
         // Tremor recording
         document.getElementById('tremor-record-btn').addEventListener('click', () => {
             this.startTremorTest();
@@ -146,6 +162,30 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 this.closeCalibrationModal();
             }
         });
+    }
+
+    handleAudioFileUpload(file) {
+        // Validate file type
+        if (!file.type.startsWith('audio/')) {
+            alert('Please select a valid audio file.');
+            return;
+        }
+        
+        // Confirm with user
+        if (confirm(`Analyze "${file.name}"?`)) {
+            // If we are in 'both' mode, uploading a file effectively skips the tremor part
+            // unless we want to support uploading both (which is not requested yet).
+            // For now, we'll proceed with the audio file and empty motion data.
+            
+            // Stop any active recording/streams
+            this.resetTest();
+            
+            // Call analysis directly, forcing 'voice' mode since we only have audio
+            this.analyzeWithStreaming(file, [], 'voice');
+        }
+        
+        // Reset input
+        document.getElementById('audio-file-input').value = '';
     }
 
     // Test Mode Selection
@@ -1136,7 +1176,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         }
     }
 
-    async analyzeWithStreaming(audioBlob, motionData) {
+    async analyzeWithStreaming(audioBlob, motionData, overrideTestMode = null) {
         try {
             // Show processing screen
             this.showScreen('processing-screen');
@@ -1146,17 +1186,20 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const formData = new FormData();
             
             // Add test mode
-            formData.append('test_mode', this.selectedTestMode);
+            const testMode = overrideTestMode || this.selectedTestMode;
+            formData.append('test_mode', testMode);
             
             // Add audio only if voice or both
-            if (this.selectedTestMode === 'voice' || this.selectedTestMode === 'both') {
+            if (testMode === 'voice' || testMode === 'both') {
                 if (audioBlob) {
-                    formData.append('audio', audioBlob, 'recording.webm');
+                    // Use original filename if available (for uploads), otherwise default
+                    const filename = audioBlob.name || 'recording.webm';
+                    formData.append('audio', audioBlob, filename);
                 }
             }
             
             // Add motion data only if tremor or both
-            if (this.selectedTestMode === 'tremor' || this.selectedTestMode === 'both') {
+            if (testMode === 'tremor' || testMode === 'both') {
                 if (motionData && motionData.length > 0) {
                     formData.append('motion_data', JSON.stringify(motionData));
                 }
