@@ -207,15 +207,16 @@ class ParkinsonMLPipeline:
                 combined_pred = "Insufficient Data"
                 logger.warning(f"⚠️ Both voice and motion are idle - returning {combined_conf*100:.1f}% confidence")
             elif voice_is_idle:
-                # Voice idle, but tremor active - use only tremor with penalty
-                combined_conf = tremor_conf * 0.5  # 50% penalty for missing voice
+                # Voice idle, but tremor active - use tremor directly (no penalty)
+                combined_conf = tremor_conf
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
-                logger.warning(f"⚠️ Voice idle - using tremor only with penalty: {combined_conf*100:.1f}%")
+                logger.warning(f"⚠️ Voice idle - using tremor only: {combined_conf*100:.1f}%")
             elif tremor_is_idle:
-                # Tremor idle, but voice active - use only voice with penalty
-                combined_conf = voice_conf * 0.5  # 50% penalty for missing motion
+                # Tremor idle, but voice active - use voice directly (no penalty)
+                # Voice analysis is reliable on its own for Parkinson's detection
+                combined_conf = voice_conf
                 combined_pred = "Affected" if combined_conf >= 0.5 else "Not Affected"
-                logger.warning(f"⚠️ Motion idle - using voice only with penalty: {combined_conf*100:.1f}%")
+                logger.info(f"📊 Motion idle - using voice only: {combined_conf*100:.1f}%")
             else:
                 # Both active - use raw ML predictions
                 logger.info(f"📊 Raw ML confidences: voice={voice_conf:.3f}, tremor={tremor_conf:.3f}")
