@@ -43,9 +43,44 @@ class PersonalizedModelHandler:
         logger.info(f"Saved baseline sample {sample_index} for user {user_id}")
         return True
     
+    def save_baseline_tremor_sample(self, user_id, tremor_features, sample_index):
+        """
+        Save a single baseline (healthy) tremor sample for a user
+        
+        Args:
+            user_id: Unique identifier for the user
+            tremor_features: Dictionary of extracted tremor features
+            sample_index: Index of this sample (0, 1, 2, etc.)
+        """
+        user_dir = os.path.join(self.storage_dir, user_id, 'baseline_tremor_samples')
+        os.makedirs(user_dir, exist_ok=True)
+        
+        # Save features
+        sample_path = os.path.join(user_dir, f'tremor_sample_{sample_index}.pkl')
+        with open(sample_path, 'wb') as f:
+            pickle.dump(tremor_features, f)
+        
+        logger.info(f"Saved baseline tremor sample {sample_index} for user {user_id}")
+        return True
+    
     def get_baseline_samples(self, user_id):
         """Load all baseline samples for a user"""
         user_dir = os.path.join(self.storage_dir, user_id, 'baseline_samples')
+        
+        if not os.path.exists(user_dir):
+            return []
+        
+        samples = []
+        for filename in sorted(os.listdir(user_dir)):
+            if filename.endswith('.pkl'):
+                with open(os.path.join(user_dir, filename), 'rb') as f:
+                    samples.append(pickle.load(f))
+        
+        return samples
+    
+    def get_baseline_tremor_samples(self, user_id):
+        """Load all baseline tremor samples for a user"""
+        user_dir = os.path.join(self.storage_dir, user_id, 'baseline_tremor_samples')
         
         if not os.path.exists(user_dir):
             return []
@@ -132,12 +167,20 @@ class PersonalizedModelHandler:
             with open(stats_path, 'w') as f:
                 json.dump(baseline_stats, f, indent=2)
             
-            logger.info(f"Trained personalized model for user {user_id} with {len(baseline_samples)} samples")
+            # Also train tremor model if tremor samples exist
+            tremor_samples = self.get_baseline_tremor_samples(user_id)
+            tremor_trained = False
+            if len(tremor_samples) >= min_samples:
+                tremor_trained = self._train_tremor_model(user_id, tremor_samples)
+            
+            logger.info(f"Trained personalized model for user {user_id} with {len(baseline_samples)} voice samples")
             
             return {
                 'success': True,
-                'message': f'Successfully trained personalized model with {len(baseline_samples)} baseline samples',
-                'stats': baseline_stats
+                'message': f'Successfully trained personalized model with {len(baseline_samples)} voice samples' + 
+                          (f' and {len(tremor_samples)} tremor samples' if tremor_trained else ''),
+                'stats': baseline_stats,
+                'tremor_trained': tremor_trained
             }
             
         except Exception as e:
@@ -146,6 +189,60 @@ class PersonalizedModelHandler:
                 'success': False,
                 'message': f'Training failed: {str(e)}'
             }
+    
+    def _train_tremor_model(self, user_id, tremor_samples):
+        """Train a personalized tremor model"""
+        try:
+            feature_vectors = []
+            sorted_keys = None
+            
+            for sample in tremor_samples:
+                clean_sample = {k: v for k, v in sample.items() 
+                              if not k.startswith('_') and isinstance(v, (int, float))}
+                if sorted_keys is None:
+                    sorted_keys = sorted(clean_sample.keys())
+                vector = np.array([clean_sample.get(k, 0) for k in sorted_keys], dtype=np.float64)
+                feature_vectors.append(vector)
+            
+            X_baseline = np.array(feature_vectors)
+            
+            # Train scaler
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X_baseline)
+            
+            # Train Isolation Forest
+            model = IsolationForest(
+                n_estimators=100,
+                contamination=0.1,
+                random_state=42,
+                max_samples='auto'
+            )
+            model.fit(X_scaled)
+            
+            # Save tremor model
+            user_dir = os.path.join(self.storage_dir, user_id)
+            with open(os.path.join(user_dir, 'tremor_model.pkl'), 'wb') as f:
+                pickle.dump(model, f)
+            with open(os.path.join(user_dir, 'tremor_scaler.pkl'), 'wb') as f:
+                pickle.dump(scaler, f)
+            
+            # Save tremor stats
+            tremor_stats = {
+                'mean': np.mean(X_baseline, axis=0).tolist(),
+                'std': np.std(X_baseline, axis=0).tolist(),
+                'feature_names': sorted_keys,
+                'num_samples': len(tremor_samples),
+                'trained_at': datetime.now().isoformat()
+            }
+            with open(os.path.join(user_dir, 'tremor_stats.json'), 'w') as f:
+                json.dump(tremor_stats, f, indent=2)
+            
+            logger.info(f"Trained personalized tremor model for user {user_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error training tremor model: {e}")
+            return False
     
     def has_personalized_model(self, user_id):
         """Check if a user has a trained personalized model"""
@@ -250,12 +347,14 @@ class PersonalizedModelHandler:
     def get_user_status(self, user_id):
         """Get calibration status for a user"""
         baseline_samples = self.get_baseline_samples(user_id)
+        tremor_samples = self.get_baseline_tremor_samples(user_id)
         has_model = self.has_personalized_model(user_id)
         
         status = {
             'user_id': user_id,
             'has_baseline_samples': len(baseline_samples) > 0,
             'baseline_sample_count': len(baseline_samples),
+            'tremor_sample_count': len(tremor_samples),
             'has_trained_model': has_model,
             'is_calibrated': has_model
         }
@@ -267,6 +366,14 @@ class PersonalizedModelHandler:
                     stats = json.load(f)
                     status['trained_at'] = stats.get('trained_at')
                     status['num_baseline_samples'] = stats.get('num_samples')
+            
+            # Check for tremor model
+            tremor_stats_path = os.path.join(self.storage_dir, user_id, 'tremor_stats.json')
+            if os.path.exists(tremor_stats_path):
+                with open(tremor_stats_path, 'r') as f:
+                    tremor_stats = json.load(f)
+                    status['tremor_trained_at'] = tremor_stats.get('trained_at')
+                    status['num_tremor_samples'] = tremor_stats.get('num_samples')
         
         return status
     

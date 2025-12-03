@@ -1118,6 +1118,44 @@ def calibration_record():
         logger.error(f"Error recording baseline: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/calibration/record-tremor', methods=['POST'])
+def calibration_record_tremor():
+    """Save a baseline (healthy) tremor sample for personalized model"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default_user')
+        sample_index = int(data.get('sample_index', 0))
+        motion_data = data.get('motion_data', [])
+        
+        if not motion_data or len(motion_data) < 10:
+            return jsonify({'error': 'Insufficient motion data', 'message': 'Please record for the full duration'}), 400
+        
+        # Extract tremor features from motion data
+        tremor_features = tremor_extractor.extract_features_fast(motion_data)
+        
+        # Check if data is valid
+        if tremor_features.get('_no_motion', False):
+            return jsonify({
+                'error': 'No motion detected',
+                'message': 'Please ensure device motion sensors are working'
+            }), 400
+        
+        # Save baseline tremor sample
+        personalized_handler.save_baseline_tremor_sample(user_id, tremor_features, sample_index)
+        
+        logger.info(f"Saved baseline tremor sample {sample_index} for user {user_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Tremor sample {sample_index} saved successfully',
+            'sample_index': sample_index,
+            'user_id': user_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recording tremor baseline: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/calibration/train', methods=['POST'])
 def calibration_train():
     """Train personalized model from collected baseline samples"""

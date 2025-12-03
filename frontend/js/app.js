@@ -26,7 +26,30 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // API Configuration - Use AppConfig for environment-aware backend URL
         this.API_BASE_URL = window.AppConfig ? window.AppConfig.getBackendUrl() : '/api';
         
+        // Calibration state
+        this.calibrationState = {
+            isCalibrating: false,
+            currentStep: 'intro', // 'intro', 'voice', 'tremor', 'training', 'complete'
+            voiceSampleIndex: 0,
+            tremorSampleIndex: 0,
+            voiceSamplesCompleted: 0,
+            tremorSamplesCompleted: 0,
+            userId: this.getUserId(),
+            audioData: [],
+            motionData: []
+        };
+        
         this.init();
+    }
+    
+    // Get or create a unique user ID for calibration
+    getUserId() {
+        let userId = localStorage.getItem('parkinson_user_id');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('parkinson_user_id', userId);
+        }
+        return userId;
     }
 
     init() {
@@ -35,6 +58,9 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         
         // Request permissions on load for better UX
         this.requestPermissions();
+        
+        // Check calibration status on load
+        this.checkCalibrationStatus();
     }
 
     setupEventListeners() {
@@ -72,6 +98,53 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Share results
         document.getElementById('share-results-btn').addEventListener('click', () => {
             this.shareResults();
+        });
+        
+        // Calibration event listeners
+        this.setupCalibrationListeners();
+    }
+    
+    setupCalibrationListeners() {
+        // Open calibration modal
+        document.getElementById('calibrate-btn')?.addEventListener('click', () => {
+            this.openCalibrationModal();
+        });
+        
+        // Close calibration modal
+        document.getElementById('close-calibration-modal')?.addEventListener('click', () => {
+            this.closeCalibrationModal();
+        });
+        
+        // Start calibration
+        document.getElementById('start-calibration-btn')?.addEventListener('click', () => {
+            this.startCalibration();
+        });
+        
+        // Voice recording for calibration
+        document.getElementById('calibration-voice-record-btn')?.addEventListener('click', () => {
+            this.startCalibrationVoiceRecording();
+        });
+        
+        // Tremor recording for calibration
+        document.getElementById('calibration-tremor-record-btn')?.addEventListener('click', () => {
+            this.startCalibrationTremorRecording();
+        });
+        
+        // Done button
+        document.getElementById('calibration-done-btn')?.addEventListener('click', () => {
+            this.closeCalibrationModal();
+        });
+        
+        // Reset calibration
+        document.getElementById('calibration-reset-btn')?.addEventListener('click', () => {
+            this.resetCalibration();
+        });
+        
+        // Close modal when clicking outside
+        document.getElementById('calibration-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'calibration-modal') {
+                this.closeCalibrationModal();
+            }
         });
     }
 
@@ -1693,6 +1766,663 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             notification.style.animation = 'fadeOut 0.3s ease';
             setTimeout(() => notification.remove(), 300);
         }, 3000);
+    }
+
+    // ========================================
+    // CALIBRATION METHODS
+    // ========================================
+    
+    async checkCalibrationStatus() {
+        try {
+            const response = await window.fetchWithNgrokBypass(
+                `${this.API_BASE_URL}/calibration/status?user_id=${this.calibrationState.userId}`
+            );
+            
+            if (response.ok) {
+                const status = await response.json();
+                this.updateCalibrationBadge(status.is_calibrated);
+                
+                if (status.is_calibrated) {
+                    console.log('✅ User has calibrated model:', status);
+                }
+            }
+        } catch (error) {
+            console.log('Could not check calibration status:', error);
+        }
+    }
+    
+    updateCalibrationBadge(isCalibrated) {
+        const badge = document.getElementById('calibrate-status-badge');
+        if (badge) {
+            if (isCalibrated) {
+                badge.textContent = '✓';
+                badge.className = 'calibrate-status calibrated';
+                badge.title = 'Model calibrated';
+            } else {
+                badge.textContent = '!';
+                badge.className = 'calibrate-status not-calibrated';
+                badge.title = 'Not calibrated';
+            }
+        }
+    }
+    
+    openCalibrationModal() {
+        const modal = document.getElementById('calibration-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            this.resetCalibrationUI();
+            this.checkCalibrationStatus();
+        }
+    }
+    
+    closeCalibrationModal() {
+        const modal = document.getElementById('calibration-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            
+            // Stop any active recording
+            if (this.calibrationState.isCalibrating) {
+                this.stopCalibrationRecording();
+            }
+        }
+    }
+    
+    resetCalibrationUI() {
+        // Reset state
+        this.calibrationState.currentStep = 'intro';
+        this.calibrationState.voiceSampleIndex = 0;
+        this.calibrationState.tremorSampleIndex = 0;
+        this.calibrationState.voiceSamplesCompleted = 0;
+        this.calibrationState.tremorSamplesCompleted = 0;
+        
+        // Show intro, hide others
+        document.querySelectorAll('.calibration-section').forEach(s => s.classList.add('hidden'));
+        document.getElementById('calibration-intro')?.classList.remove('hidden');
+        
+        // Reset progress steps
+        document.querySelectorAll('.progress-step').forEach(s => {
+            s.classList.remove('active', 'completed');
+        });
+        document.querySelectorAll('.progress-line').forEach(l => l.classList.remove('active'));
+        
+        // Reset sample dots
+        document.querySelectorAll('.sample-dot').forEach(d => {
+            d.classList.remove('active', 'completed');
+        });
+    }
+    
+    startCalibration() {
+        this.calibrationState.currentStep = 'voice';
+        this.calibrationState.voiceSampleIndex = 0;
+        this.showCalibrationStep('voice');
+    }
+    
+    showCalibrationStep(step) {
+        // Hide all sections
+        document.querySelectorAll('.calibration-section').forEach(s => s.classList.add('hidden'));
+        
+        // Update progress steps
+        const steps = ['voice', 'tremor', 'training'];
+        const stepIndex = steps.indexOf(step);
+        
+        document.querySelectorAll('.progress-step').forEach((s, i) => {
+            s.classList.remove('active', 'completed');
+            if (i < stepIndex) s.classList.add('completed');
+            if (i === stepIndex) s.classList.add('active');
+        });
+        
+        document.querySelectorAll('.progress-line').forEach((l, i) => {
+            l.classList.toggle('active', i < stepIndex);
+        });
+        
+        // Show the appropriate section
+        if (step === 'voice') {
+            document.getElementById('calibration-voice')?.classList.remove('hidden');
+            this.updateVoiceSampleUI();
+        } else if (step === 'tremor') {
+            document.getElementById('calibration-tremor')?.classList.remove('hidden');
+            this.updateTremorSampleUI();
+        } else if (step === 'training') {
+            document.getElementById('calibration-training')?.classList.remove('hidden');
+            this.trainPersonalizedModel();
+        } else if (step === 'complete') {
+            document.querySelectorAll('.progress-step').forEach(s => s.classList.add('completed'));
+            document.querySelectorAll('.progress-line').forEach(l => l.classList.add('active'));
+            document.getElementById('calibration-complete')?.classList.remove('hidden');
+        }
+    }
+    
+    updateVoiceSampleUI() {
+        const sampleNum = this.calibrationState.voiceSampleIndex + 1;
+        document.getElementById('voice-sample-num').textContent = sampleNum;
+        
+        // Update sample dots
+        document.querySelectorAll('#calibration-voice .sample-dot').forEach((dot, i) => {
+            dot.classList.remove('active', 'completed');
+            if (i < this.calibrationState.voiceSampleIndex) dot.classList.add('completed');
+            if (i === this.calibrationState.voiceSampleIndex) dot.classList.add('active');
+        });
+        
+        // Reset button
+        const btn = document.getElementById('calibration-voice-record-btn');
+        if (btn) {
+            btn.innerHTML = '<span class="record-icon">🎤</span><span class="record-text">Start Recording</span>';
+            btn.classList.remove('recording');
+            btn.disabled = false;
+        }
+        
+        // Reset timer
+        document.getElementById('calibration-voice-timer').textContent = '10s';
+        document.getElementById('calibration-voice-timer').classList.remove('active');
+        
+        // Reset visualizer
+        const visualizer = document.getElementById('calibration-voice-visualizer');
+        visualizer.classList.remove('recording');
+        visualizer.innerHTML = '<div class="visualizer-placeholder"><span>🎤</span><p>Ready to record</p></div>';
+        
+        // Clear status
+        document.getElementById('calibration-voice-status').textContent = '';
+    }
+    
+    updateTremorSampleUI() {
+        const sampleNum = this.calibrationState.tremorSampleIndex + 1;
+        document.getElementById('tremor-sample-num').textContent = sampleNum;
+        
+        // Update sample dots
+        document.querySelectorAll('#calibration-tremor .sample-dot').forEach((dot, i) => {
+            dot.classList.remove('active', 'completed');
+            if (i < this.calibrationState.tremorSampleIndex) dot.classList.add('completed');
+            if (i === this.calibrationState.tremorSampleIndex) dot.classList.add('active');
+        });
+        
+        // Reset button
+        const btn = document.getElementById('calibration-tremor-record-btn');
+        if (btn) {
+            btn.innerHTML = '<span class="record-icon">📱</span><span class="record-text">Start Recording</span>';
+            btn.classList.remove('recording');
+            btn.disabled = false;
+        }
+        
+        // Reset timer
+        document.getElementById('calibration-tremor-timer').textContent = '15s';
+        document.getElementById('calibration-tremor-timer').classList.remove('active');
+        
+        // Reset visualizer
+        const visualizer = document.getElementById('calibration-tremor-visualizer');
+        visualizer.classList.remove('recording');
+        
+        // Clear status
+        document.getElementById('calibration-tremor-status').textContent = '';
+    }
+    
+    async startCalibrationVoiceRecording() {
+        if (this.calibrationState.isCalibrating) return;
+        
+        try {
+            // Get microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 44100
+                }
+            });
+            
+            this.calibrationState.isCalibrating = true;
+            this.calibrationState.audioStream = stream;
+            this.calibrationState.audioData = [];
+            
+            // Setup audio context for visualization
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            this.calibrationState.audioContext = audioContext;
+            this.calibrationState.analyser = analyser;
+            
+            // Setup MediaRecorder
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+                ? 'audio/webm;codecs=opus' : 'audio/webm';
+            
+            const mediaRecorder = new MediaRecorder(stream, {
+                mimeType,
+                audioBitsPerSecond: 128000
+            });
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    this.calibrationState.audioData.push(e.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                this.processCalibrationVoiceSample();
+            };
+            
+            this.calibrationState.mediaRecorder = mediaRecorder;
+            mediaRecorder.start(100);
+            
+            // Update UI
+            const btn = document.getElementById('calibration-voice-record-btn');
+            btn.innerHTML = '<span class="record-icon">⏹️</span><span class="record-text">Recording...</span>';
+            btn.classList.add('recording');
+            btn.disabled = true;
+            
+            const visualizer = document.getElementById('calibration-voice-visualizer');
+            visualizer.classList.add('recording');
+            this.startCalibrationAudioVisualization(analyser);
+            
+            // Start countdown timer
+            const timerEl = document.getElementById('calibration-voice-timer');
+            timerEl.classList.add('active');
+            let timeLeft = 10;
+            
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = `${timeLeft}s`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    this.stopCalibrationVoiceRecording();
+                }
+            }, 1000);
+            
+            this.calibrationState.timerInterval = timerInterval;
+            
+            this.showCalibrationStatus('calibration-voice-status', 'Recording... Speak clearly', 'info');
+            
+        } catch (error) {
+            console.error('Error starting calibration recording:', error);
+            this.showCalibrationStatus('calibration-voice-status', 'Error: Could not access microphone', 'error');
+        }
+    }
+    
+    startCalibrationAudioVisualization(analyser) {
+        const visualizer = document.getElementById('calibration-voice-visualizer');
+        visualizer.innerHTML = '<div class="calibration-audio-bars"></div>';
+        const barsContainer = visualizer.querySelector('.calibration-audio-bars');
+        
+        // Create bars
+        const numBars = 24;
+        for (let i = 0; i < numBars; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'calibration-audio-bar';
+            bar.style.height = '10px';
+            barsContainer.appendChild(bar);
+        }
+        
+        const bars = barsContainer.querySelectorAll('.calibration-audio-bar');
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        const animate = () => {
+            if (!this.calibrationState.isCalibrating) return;
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            for (let i = 0; i < numBars; i++) {
+                const value = dataArray[Math.floor(i * bufferLength / numBars)];
+                const height = Math.max(10, (value / 255) * 80);
+                bars[i].style.height = `${height}px`;
+            }
+            
+            requestAnimationFrame(animate);
+        };
+        
+        animate();
+    }
+    
+    stopCalibrationVoiceRecording() {
+        if (this.calibrationState.timerInterval) {
+            clearInterval(this.calibrationState.timerInterval);
+        }
+        
+        if (this.calibrationState.mediaRecorder && this.calibrationState.mediaRecorder.state !== 'inactive') {
+            this.calibrationState.mediaRecorder.stop();
+        }
+        
+        if (this.calibrationState.audioStream) {
+            this.calibrationState.audioStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (this.calibrationState.audioContext) {
+            this.calibrationState.audioContext.close();
+        }
+        
+        this.calibrationState.isCalibrating = false;
+    }
+    
+    async processCalibrationVoiceSample() {
+        this.showCalibrationStatus('calibration-voice-status', 'Processing sample...', 'info');
+        
+        try {
+            const audioBlob = new Blob(this.calibrationState.audioData, { type: 'audio/webm' });
+            
+            // Send to backend
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'calibration.webm');
+            formData.append('user_id', this.calibrationState.userId);
+            formData.append('sample_index', this.calibrationState.voiceSampleIndex);
+            
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/record`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                this.calibrationState.voiceSampleIndex++;
+                this.calibrationState.voiceSamplesCompleted++;
+                
+                this.showCalibrationStatus('calibration-voice-status', `Sample ${this.calibrationState.voiceSampleIndex}/3 saved ✓`, 'success');
+                
+                // Check if we have all voice samples
+                if (this.calibrationState.voiceSampleIndex >= 3) {
+                    // Move to tremor recording
+                    setTimeout(() => {
+                        this.calibrationState.currentStep = 'tremor';
+                        this.showCalibrationStep('tremor');
+                    }, 1500);
+                } else {
+                    // Prepare for next sample
+                    setTimeout(() => {
+                        this.updateVoiceSampleUI();
+                    }, 1500);
+                }
+            } else {
+                throw new Error(result.error || result.message || 'Failed to save sample');
+            }
+            
+        } catch (error) {
+            console.error('Error processing voice sample:', error);
+            this.showCalibrationStatus('calibration-voice-status', `Error: ${error.message}`, 'error');
+            
+            // Re-enable button to retry
+            const btn = document.getElementById('calibration-voice-record-btn');
+            btn.innerHTML = '<span class="record-icon">🎤</span><span class="record-text">Retry Recording</span>';
+            btn.classList.remove('recording');
+            btn.disabled = false;
+        }
+    }
+    
+    async startCalibrationTremorRecording() {
+        if (this.calibrationState.isCalibrating) return;
+        
+        this.calibrationState.isCalibrating = true;
+        this.calibrationState.motionData = [];
+        
+        // Update UI
+        const btn = document.getElementById('calibration-tremor-record-btn');
+        btn.innerHTML = '<span class="record-icon">⏹️</span><span class="record-text">Recording...</span>';
+        btn.classList.add('recording');
+        btn.disabled = true;
+        
+        const visualizer = document.getElementById('calibration-tremor-visualizer');
+        visualizer.classList.add('recording');
+        
+        // Start motion capture
+        const motionHandler = (event) => {
+            if (!this.calibrationState.isCalibrating) return;
+            
+            const accel = event.accelerationIncludingGravity || event.acceleration || {};
+            const rotation = event.rotationRate || {};
+            
+            this.calibrationState.motionData.push({
+                timestamp: Date.now(),
+                accelerometer: {
+                    x: accel.x || 0,
+                    y: accel.y || 0,
+                    z: accel.z || 0
+                },
+                gyroscope: {
+                    alpha: rotation.alpha || 0,
+                    beta: rotation.beta || 0,
+                    gamma: rotation.gamma || 0
+                }
+            });
+            
+            // Update visualization
+            document.getElementById('cal-accel-x').textContent = (accel.x || 0).toFixed(2);
+            document.getElementById('cal-accel-y').textContent = (accel.y || 0).toFixed(2);
+            document.getElementById('cal-accel-z').textContent = (accel.z || 0).toFixed(2);
+        };
+        
+        // Request permission for iOS
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            try {
+                const permission = await DeviceMotionEvent.requestPermission();
+                if (permission !== 'granted') {
+                    throw new Error('Motion permission denied');
+                }
+            } catch (e) {
+                this.showCalibrationStatus('calibration-tremor-status', 'Motion sensor permission required', 'error');
+                btn.disabled = false;
+                return;
+            }
+        }
+        
+        window.addEventListener('devicemotion', motionHandler);
+        this.calibrationState.motionHandler = motionHandler;
+        
+        // Start countdown timer
+        const timerEl = document.getElementById('calibration-tremor-timer');
+        timerEl.classList.add('active');
+        let timeLeft = 15;
+        
+        const timerInterval = setInterval(() => {
+            timeLeft--;
+            timerEl.textContent = `${timeLeft}s`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                this.stopCalibrationTremorRecording();
+            }
+        }, 1000);
+        
+        this.calibrationState.timerInterval = timerInterval;
+        
+        this.showCalibrationStatus('calibration-tremor-status', 'Recording... Keep phone steady', 'info');
+    }
+    
+    stopCalibrationTremorRecording() {
+        if (this.calibrationState.timerInterval) {
+            clearInterval(this.calibrationState.timerInterval);
+        }
+        
+        if (this.calibrationState.motionHandler) {
+            window.removeEventListener('devicemotion', this.calibrationState.motionHandler);
+        }
+        
+        this.calibrationState.isCalibrating = false;
+        this.processCalibrationTremorSample();
+    }
+    
+    async processCalibrationTremorSample() {
+        this.showCalibrationStatus('calibration-tremor-status', 'Processing sample...', 'info');
+        
+        try {
+            // Send tremor data to backend
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/record-tremor`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.calibrationState.userId,
+                    sample_index: this.calibrationState.tremorSampleIndex,
+                    motion_data: this.calibrationState.motionData
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                this.calibrationState.tremorSampleIndex++;
+                this.calibrationState.tremorSamplesCompleted++;
+                
+                this.showCalibrationStatus('calibration-tremor-status', `Sample ${this.calibrationState.tremorSampleIndex}/3 saved ✓`, 'success');
+                
+                // Check if we have all tremor samples
+                if (this.calibrationState.tremorSampleIndex >= 3) {
+                    // Move to training
+                    setTimeout(() => {
+                        this.calibrationState.currentStep = 'training';
+                        this.showCalibrationStep('training');
+                    }, 1500);
+                } else {
+                    // Prepare for next sample
+                    setTimeout(() => {
+                        this.updateTremorSampleUI();
+                    }, 1500);
+                }
+            } else {
+                throw new Error(result.error || result.message || 'Failed to save sample');
+            }
+            
+        } catch (error) {
+            console.error('Error processing tremor sample:', error);
+            this.showCalibrationStatus('calibration-tremor-status', `Error: ${error.message}`, 'error');
+            
+            // Re-enable button to retry
+            const btn = document.getElementById('calibration-tremor-record-btn');
+            btn.innerHTML = '<span class="record-icon">📱</span><span class="record-text">Retry Recording</span>';
+            btn.classList.remove('recording');
+            btn.disabled = false;
+        }
+    }
+    
+    async trainPersonalizedModel() {
+        const statusText = document.getElementById('training-status-text');
+        const progressBar = document.getElementById('training-progress-bar');
+        
+        try {
+            // Simulate progress stages
+            const stages = [
+                { text: 'Analyzing voice samples...', progress: 20 },
+                { text: 'Extracting features...', progress: 40 },
+                { text: 'Analyzing tremor patterns...', progress: 60 },
+                { text: 'Training personalized model...', progress: 80 },
+                { text: 'Finalizing...', progress: 95 }
+            ];
+            
+            let stageIndex = 0;
+            const progressInterval = setInterval(() => {
+                if (stageIndex < stages.length) {
+                    statusText.textContent = stages[stageIndex].text;
+                    progressBar.style.width = stages[stageIndex].progress + '%';
+                    stageIndex++;
+                }
+            }, 800);
+            
+            // Call backend to train model
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/train`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.calibrationState.userId
+                })
+            });
+            
+            clearInterval(progressInterval);
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                progressBar.style.width = '100%';
+                statusText.textContent = 'Training complete!';
+                
+                // Update stats
+                document.getElementById('stat-voice-samples').textContent = this.calibrationState.voiceSamplesCompleted;
+                document.getElementById('stat-tremor-samples').textContent = this.calibrationState.tremorSamplesCompleted;
+                document.getElementById('stat-trained-date').textContent = 'Now';
+                
+                // Show complete section
+                setTimeout(() => {
+                    this.calibrationState.currentStep = 'complete';
+                    this.showCalibrationStep('complete');
+                    this.updateCalibrationBadge(true);
+                }, 1000);
+                
+            } else {
+                throw new Error(result.error || result.message || 'Training failed');
+            }
+            
+        } catch (error) {
+            console.error('Error training model:', error);
+            statusText.textContent = `Error: ${error.message}`;
+            progressBar.style.background = '#ef4444';
+        }
+    }
+    
+    async resetCalibration() {
+        if (!confirm('Are you sure you want to reset your calibration? All baseline data will be deleted.')) {
+            return;
+        }
+        
+        try {
+            const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/reset`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.calibrationState.userId
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                this.updateCalibrationBadge(false);
+                this.resetCalibrationUI();
+                this.showNotification('Calibration data reset successfully', 'success');
+            } else {
+                throw new Error(result.error || 'Reset failed');
+            }
+            
+        } catch (error) {
+            console.error('Error resetting calibration:', error);
+            this.showNotification('Failed to reset calibration', 'error');
+        }
+    }
+    
+    stopCalibrationRecording() {
+        if (this.calibrationState.timerInterval) {
+            clearInterval(this.calibrationState.timerInterval);
+        }
+        
+        if (this.calibrationState.mediaRecorder && this.calibrationState.mediaRecorder.state !== 'inactive') {
+            this.calibrationState.mediaRecorder.stop();
+        }
+        
+        if (this.calibrationState.audioStream) {
+            this.calibrationState.audioStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (this.calibrationState.audioContext) {
+            this.calibrationState.audioContext.close();
+        }
+        
+        if (this.calibrationState.motionHandler) {
+            window.removeEventListener('devicemotion', this.calibrationState.motionHandler);
+        }
+        
+        this.calibrationState.isCalibrating = false;
+    }
+    
+    showCalibrationStatus(elementId, message, type) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = message;
+            element.className = `calibration-status ${type}`;
+        }
     }
 
     // Utility Functions

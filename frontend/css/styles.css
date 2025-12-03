@@ -2054,3 +2054,578 @@ body {
         font-size: 2rem;
     }
 }
+
+/* ========================================
+   CALIBRATION STYLES
+   ======================================== */
+
+/* Calibrate Button */
+.btn-calibrate {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-calibrate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(240, 147, 251, 0.4);
+}
+
+.btn-calibrate .calibrate-icon {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+.btn-calibrate:hover .calibrate-icon {
+    transform: rotate(90deg);
+}
+
+.btn-calibrate .calibrate-status {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.btn-calibrate .calibrate-status.calibrated {
+    background: #28a745;
+}
+
+.btn-calibrate .calibrate-status.not-calibrated {
+    background: #ffc107;
+}
+
+/* Calibration Modal */
+.calibration-modal {
+    justify-content: center;
+    align-items: center;
+}
+
+.calibration-modal .modal-content {
+    max-width: 600px;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.calibration-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+}
+
+.calibration-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.calibration-header .header-icon {
+    font-size: 1.8rem;
+}
+
+.calibration-header .modal-close {
+    color: white;
+    opacity: 0.8;
+}
+
+.calibration-header .modal-close:hover {
+    opacity: 1;
+}
+
+.calibration-body {
+    padding: 2rem;
+}
+
+/* Progress Steps */
+.calibration-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .step-circle {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.progress-step.completed .step-circle {
+    background: #28a745;
+    color: white;
+}
+
+.step-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.progress-step.active .step-label,
+.progress-step.completed .step-label {
+    color: #2c3e50;
+}
+
+.progress-line {
+    flex: 1;
+    height: 3px;
+    background: #e9ecef;
+    margin: 0 0.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 2px;
+    transition: background 0.3s ease;
+}
+
+.progress-line.active {
+    background: linear-gradient(90deg, #28a745, #667eea);
+}
+
+/* Calibration Sections */
+.calibration-section {
+    text-align: center;
+    animation: fadeInUp 0.4s ease;
+}
+
+.calibration-section.hidden {
+    display: none;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.calibration-section h3 {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+    color: #6c757d;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Intro Section */
+.calibration-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.calibration-description {
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 450px;
+    margin: 0 auto 1.5rem;
+}
+
+.calibration-requirements {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.requirement-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+.requirement-item .req-icon {
+    font-size: 1.2rem;
+}
+
+/* Sample Progress Dots */
+.sample-progress {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.sample-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.sample-dot.active {
+    background: #667eea;
+    transform: scale(1.3);
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.sample-dot.completed {
+    background: #28a745;
+}
+
+/* Recording Area */
+.recording-area {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.recording-visualizer {
+    height: 120px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.recording-visualizer.recording {
+    background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+    border: 2px solid #667eea;
+}
+
+.visualizer-placeholder {
+    text-align: center;
+    color: #6c757d;
+}
+
+.visualizer-placeholder span {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.visualizer-placeholder p {
+    font-size: 0.9rem;
+}
+
+.calibration-audio-bars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 100%;
+    padding: 1rem;
+}
+
+.calibration-audio-bar {
+    width: 6px;
+    background: linear-gradient(180deg, #667eea, #764ba2);
+    border-radius: 3px;
+    transition: height 0.05s ease;
+}
+
+.recording-timer {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.recording-timer.active {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    animation: timerPulse 1s infinite;
+}
+
+@keyframes timerPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Tremor Visualizer */
+.tremor-visualizer {
+    height: 150px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 1rem 2rem;
+}
+
+.tremor-visualizer.recording {
+    background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+    border: 2px solid #667eea;
+}
+
+.tremor-visualizer .phone-illustration {
+    width: 60px;
+    height: 100px;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease;
+}
+
+.tremor-visualizer .phone-inner {
+    font-size: 2rem;
+}
+
+.tremor-axes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tremor-axes .axis {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: 8px;
+    min-width: 120px;
+}
+
+.tremor-axes .x-axis { color: #e74c3c; }
+.tremor-axes .y-axis { color: #27ae60; }
+.tremor-axes .z-axis { color: #3498db; }
+
+/* Recording Instruction */
+.recording-instruction {
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #fff3cd;
+    border-radius: 10px;
+    border-left: 4px solid #ffc107;
+}
+
+/* Calibration Status */
+.calibration-status {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.calibration-status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.calibration-status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.calibration-status.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Training Section */
+.training-animation {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+}
+
+.training-spinner {
+    position: absolute;
+    inset: 0;
+    border: 4px solid #e9ecef;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.training-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.training-status {
+    color: #6c757d;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.training-progress {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.training-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+/* Complete Section */
+.complete-icon {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+    animation: bounceIn 0.6s ease;
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.complete-message {
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 400px;
+    margin: 0 auto 1.5rem;
+}
+
+.calibration-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .calibration-modal .modal-content {
+        margin: 1rem;
+        border-radius: 16px;
+    }
+
+    .calibration-body {
+        padding: 1.5rem;
+    }
+
+    .calibration-progress {
+        padding: 0;
+    }
+
+    .step-circle {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+
+    .step-label {
+        font-size: 0.75rem;
+    }
+
+    .calibration-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .tremor-visualizer {
+        flex-direction: column;
+        height: auto;
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+
+    .tremor-axes {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .tremor-axes .axis {
+        min-width: auto;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}

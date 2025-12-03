@@ -62,6 +62,11 @@
                     <button id="start-test-btn" class="btn btn-primary btn-large">
                         Start Detection Test
                     </button>
+                    <button id="calibrate-btn" class="btn btn-calibrate btn-large" style="margin-top: 1rem;">
+                        <span class="calibrate-icon">⚙️</span>
+                        <span class="calibrate-text">Calibrate Model</span>
+                        <span class="calibrate-status" id="calibrate-status-badge"></span>
+                    </button>
                     <button id="sensor-test-btn" class="btn btn-secondary btn-large" style="margin-top: 1rem;" onclick="window.location.href='sensor-test.html'">
                         🔬 Test Sensors & Microphone
                     </button>
@@ -517,6 +522,175 @@
                     </div>
                     <div class="modal-note">
                         <strong>Note:</strong> Detailed analysis includes all features matching the research dataset format.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calibration Modal -->
+        <div id="calibration-modal" class="modal calibration-modal">
+            <div class="modal-content calibration-content">
+                <div class="modal-header calibration-header">
+                    <h2><span class="header-icon">⚙️</span> Model Calibration</h2>
+                    <button class="modal-close" id="close-calibration-modal">&times;</button>
+                </div>
+                <div class="modal-body calibration-body">
+                    <!-- Progress Steps -->
+                    <div class="calibration-progress">
+                        <div class="progress-step" data-step="1">
+                            <div class="step-circle">1</div>
+                            <span class="step-label">Voice</span>
+                        </div>
+                        <div class="progress-line"></div>
+                        <div class="progress-step" data-step="2">
+                            <div class="step-circle">2</div>
+                            <span class="step-label">Tremor</span>
+                        </div>
+                        <div class="progress-line"></div>
+                        <div class="progress-step" data-step="3">
+                            <div class="step-circle">3</div>
+                            <span class="step-label">Train</span>
+                        </div>
+                    </div>
+
+                    <!-- Intro Section -->
+                    <div class="calibration-section" id="calibration-intro">
+                        <div class="calibration-icon">🎯</div>
+                        <h3>Personalize Your Detection</h3>
+                        <p class="calibration-description">
+                            Record baseline samples to train a model that understands your unique voice and movement patterns. 
+                            This improves detection accuracy by comparing future tests to your personal baseline.
+                        </p>
+                        <div class="calibration-requirements">
+                            <div class="requirement-item">
+                                <span class="req-icon">🎤</span>
+                                <span>3 voice recordings (10 sec each)</span>
+                            </div>
+                            <div class="requirement-item">
+                                <span class="req-icon">📱</span>
+                                <span>3 tremor recordings (15 sec each)</span>
+                            </div>
+                            <div class="requirement-item">
+                                <span class="req-icon">⏱️</span>
+                                <span>~3 minutes total</span>
+                            </div>
+                        </div>
+                        <button id="start-calibration-btn" class="btn btn-primary btn-large">
+                            <span>🚀</span> Start Calibration
+                        </button>
+                    </div>
+
+                    <!-- Voice Recording Section -->
+                    <div class="calibration-section hidden" id="calibration-voice">
+                        <h3>🎤 Voice Baseline Recording</h3>
+                        <p class="section-subtitle">Sample <span id="voice-sample-num">1</span> of 3</p>
+                        
+                        <div class="sample-progress">
+                            <div class="sample-dot completed" data-sample="1"></div>
+                            <div class="sample-dot" data-sample="2"></div>
+                            <div class="sample-dot" data-sample="3"></div>
+                        </div>
+
+                        <div class="recording-area">
+                            <div class="recording-visualizer" id="calibration-voice-visualizer">
+                                <div class="visualizer-placeholder">
+                                    <span>🎤</span>
+                                    <p>Ready to record</p>
+                                </div>
+                            </div>
+                            <div class="recording-timer" id="calibration-voice-timer">10s</div>
+                        </div>
+
+                        <p class="recording-instruction">
+                            Speak normally for 10 seconds. You can count, read, or describe your day.
+                        </p>
+
+                        <button id="calibration-voice-record-btn" class="btn btn-record btn-large">
+                            <span class="record-icon">🎤</span>
+                            <span class="record-text">Start Recording</span>
+                        </button>
+
+                        <div class="calibration-status" id="calibration-voice-status"></div>
+                    </div>
+
+                    <!-- Tremor Recording Section -->
+                    <div class="calibration-section hidden" id="calibration-tremor">
+                        <h3>📱 Tremor Baseline Recording</h3>
+                        <p class="section-subtitle">Sample <span id="tremor-sample-num">1</span> of 3</p>
+                        
+                        <div class="sample-progress">
+                            <div class="sample-dot completed" data-sample="1"></div>
+                            <div class="sample-dot" data-sample="2"></div>
+                            <div class="sample-dot" data-sample="3"></div>
+                        </div>
+
+                        <div class="recording-area">
+                            <div class="tremor-visualizer" id="calibration-tremor-visualizer">
+                                <div class="phone-illustration">
+                                    <div class="phone-inner">📱</div>
+                                </div>
+                                <div class="tremor-axes">
+                                    <div class="axis x-axis"><span>X:</span> <span id="cal-accel-x">0.00</span></div>
+                                    <div class="axis y-axis"><span>Y:</span> <span id="cal-accel-y">0.00</span></div>
+                                    <div class="axis z-axis"><span>Z:</span> <span id="cal-accel-z">0.00</span></div>
+                                </div>
+                            </div>
+                            <div class="recording-timer" id="calibration-tremor-timer">15s</div>
+                        </div>
+
+                        <p class="recording-instruction">
+                            Hold your phone steady with your arm extended. Try to keep it as still as possible.
+                        </p>
+
+                        <button id="calibration-tremor-record-btn" class="btn btn-record btn-large">
+                            <span class="record-icon">📱</span>
+                            <span class="record-text">Start Recording</span>
+                        </button>
+
+                        <div class="calibration-status" id="calibration-tremor-status"></div>
+                    </div>
+
+                    <!-- Training Section -->
+                    <div class="calibration-section hidden" id="calibration-training">
+                        <div class="training-animation">
+                            <div class="training-spinner"></div>
+                            <div class="training-icon">🧠</div>
+                        </div>
+                        <h3>Training Your Model</h3>
+                        <p class="training-status" id="training-status-text">Analyzing baseline samples...</p>
+                        <div class="training-progress">
+                            <div class="training-progress-bar" id="training-progress-bar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Complete Section -->
+                    <div class="calibration-section hidden" id="calibration-complete">
+                        <div class="complete-icon">✅</div>
+                        <h3>Calibration Complete!</h3>
+                        <p class="complete-message">
+                            Your personalized model has been trained successfully. 
+                            Future tests will now compare against your personal baseline for improved accuracy.
+                        </p>
+                        <div class="calibration-stats" id="calibration-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-voice-samples">3</span>
+                                <span class="stat-label">Voice Samples</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-tremor-samples">3</span>
+                                <span class="stat-label">Tremor Samples</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-trained-date">Now</span>
+                                <span class="stat-label">Trained</span>
+                            </div>
+                        </div>
+                        <button id="calibration-done-btn" class="btn btn-primary btn-large">
+                            <span>✓</span> Done
+                        </button>
+                        <button id="calibration-reset-btn" class="btn btn-secondary" style="margin-top: 1rem;">
+                            🔄 Reset Calibration
+                        </button>
                     </div>
                 </div>
             </div>
