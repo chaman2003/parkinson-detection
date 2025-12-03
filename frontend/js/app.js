@@ -1457,41 +1457,61 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const featureKeys = Object.keys(rawAudioFeatures);
 
             if (featureKeys.length > 0) {
-                // Map features with normalized values and readable names
-                const normalizedFeatures = featureKeys
-                    .map(key => {
-                        const rawValue = rawAudioFeatures[key];
-                        let normalizedValue = 0;
-                        let displayValue = rawValue;
-                        
-                        // Normalize different types of features to 0-100 scale
-                        if (key.includes('pitch')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 220, 1) * 100; // Normalize pitch
-                        } else if (key.includes('mfcc')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100; // MFCC normalization
-                        } else if (key.includes('hnr')) {
-                            normalizedValue = Math.max(0, Math.min((rawValue + 10) / 30, 1)) * 100; // HNR
-                        } else if (key.includes('energy') || key.includes('rms')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 1, 1) * 100; // Energy/RMS
-                        } else if (key.includes('zcr')) {
-                            normalizedValue = Math.min(rawValue / 0.5, 1) * 100; // ZCR
-                        } else if (key.includes('spectral')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 5000, 1) * 100; // Spectral
-                        } else {
-                            // Default normalization for unknown features
-                            normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
-                        }
-                        
-                        return {
+                // Group features by type to avoid duplicates
+                const featuresByType = {};
+                
+                featureKeys.forEach(key => {
+                    const rawValue = rawAudioFeatures[key];
+                    let normalizedValue = 0;
+                    let featureType = 'other';
+                    
+                    // Determine feature type
+                    if (key.includes('pitch')) {
+                        featureType = 'pitch';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 220, 1) * 100;
+                    } else if (key.includes('mfcc')) {
+                        featureType = 'mfcc';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
+                    } else if (key.includes('hnr')) {
+                        featureType = 'hnr';
+                        normalizedValue = Math.max(0, Math.min((rawValue + 10) / 30, 1)) * 100;
+                    } else if (key.includes('energy') || key.includes('rms')) {
+                        featureType = 'energy';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 1, 1) * 100;
+                    } else if (key.includes('zcr')) {
+                        featureType = 'zcr';
+                        normalizedValue = Math.min(rawValue / 0.5, 1) * 100;
+                    } else if (key.includes('spectral')) {
+                        featureType = 'spectral';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 5000, 1) * 100;
+                    } else if (key.includes('chroma')) {
+                        featureType = 'chroma';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
+                    } else if (key.includes('tempogram')) {
+                        featureType = 'tempogram';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
+                    } else {
+                        featureType = 'other_' + key.substring(0, 10);
+                        normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
+                    }
+                    
+                    // Keep only the highest value for each feature type
+                    if (!featuresByType[featureType] || normalizedValue > featuresByType[featureType].value) {
+                        featuresByType[featureType] = {
                             name: this.formatFeatureName(key),
                             icon: this.getFeatureIcon(key),
                             value: normalizedValue,
                             rawValue: rawValue,
-                            unit: '%'
+                            unit: '%',
+                            key: key
                         };
-                    })
-                    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)) // Sort by importance
-                    .slice(0, MAX_FEATURES_PER_SECTION); // Take top 20
+                    }
+                });
+                
+                // Convert to array and sort by importance
+                const normalizedFeatures = Object.values(featuresByType)
+                    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+                    .slice(0, MAX_FEATURES_PER_SECTION);
                 
                 voiceFeatures = normalizedFeatures;
             } else {
@@ -1518,7 +1538,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 voiceFeatureCount++;
             });
             
-            // Always show "Voice: 20/20 features" when displaying voice features
+            // Always show "Voice: X/20 features"
             document.getElementById('voice-feature-count').textContent = `Voice: ${Math.min(voiceFeatureCount, MAX_FEATURES_PER_SECTION)}/${MAX_FEATURES_PER_SECTION} features`;
         } else {
             voiceFeaturesSection.style.display = 'none';
@@ -1541,46 +1561,69 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const featureKeys = Object.keys(rawTremorFeatures);
 
             if (featureKeys.length > 0) {
-                // Map features with normalized values and readable names
-                const normalizedFeatures = featureKeys
-                    .filter(key => !key.startsWith('_')) // Skip internal keys
-                    .map(key => {
-                        const rawValue = rawTremorFeatures[key];
-                        let normalizedValue = 0;
-                        let unit = '';
-                        
-                        // Normalize different types of tremor features
-                        if (key.includes('freq') || key.includes('frequency')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100; // Frequency normalization
-                            unit = 'Hz';
-                        } else if (key.includes('magnitude') || key.includes('amplitude')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100; // Magnitude
-                            unit = '';
-                        } else if (key.includes('power')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100; // Power
-                            unit = '';
-                        } else if (key.includes('entropy') || key.includes('complexity')) {
-                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100; // Entropy
-                            unit = '';
-                        } else if (key.includes('dfa')) {
-                            normalizedValue = Math.min(Math.abs(rawValue), 1) * 100; // DFA
-                            unit = '';
-                        } else {
-                            // Default normalization
-                            normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
-                            unit = '';
-                        }
-                        
-                        return {
+                // Group features by type to avoid duplicates
+                const featuresByType = {};
+                
+                featureKeys.forEach(key => {
+                    if (key.startsWith('_')) return; // Skip internal keys
+                    
+                    const rawValue = rawTremorFeatures[key];
+                    let normalizedValue = 0;
+                    let featureType = 'other';
+                    let unit = '%';
+                    
+                    // Determine feature type
+                    if (key.includes('freq') || key.includes('frequency')) {
+                        featureType = 'frequency';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                        unit = 'Hz';
+                    } else if (key.includes('magnitude') || key.includes('amplitude')) {
+                        featureType = 'magnitude';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                        unit = '%';
+                    } else if (key.includes('power')) {
+                        featureType = 'power';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 100, 1) * 100;
+                        unit = '%';
+                    } else if (key.includes('entropy') || key.includes('complexity')) {
+                        featureType = 'entropy';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                        unit = '%';
+                    } else if (key.includes('dfa')) {
+                        featureType = 'dfa';
+                        normalizedValue = Math.min(Math.abs(rawValue), 1) * 100;
+                        unit = '%';
+                    } else if (key.includes('variance') || key.includes('std')) {
+                        featureType = 'variance';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                        unit = '%';
+                    } else if (key.includes('mean')) {
+                        featureType = 'mean';
+                        normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                        unit = '%';
+                    } else {
+                        featureType = 'other_' + key.substring(0, 10);
+                        normalizedValue = Math.min(Math.abs(rawValue) / 10, 1) * 100;
+                        unit = '%';
+                    }
+                    
+                    // Keep only the highest value for each feature type
+                    if (!featuresByType[featureType] || normalizedValue > featuresByType[featureType].value) {
+                        featuresByType[featureType] = {
                             name: this.formatFeatureName(key),
                             icon: this.getFeatureIcon(key),
                             value: normalizedValue,
                             rawValue: rawValue,
-                            unit: unit || '%'
+                            unit: unit,
+                            key: key
                         };
-                    })
-                    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)) // Sort by importance
-                    .slice(0, MAX_FEATURES_PER_SECTION); // Take top 20
+                    }
+                });
+                
+                // Convert to array and sort by importance
+                const normalizedFeatures = Object.values(featuresByType)
+                    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+                    .slice(0, MAX_FEATURES_PER_SECTION);
                 
                 tremorFeatures = normalizedFeatures;
             } else {
@@ -1607,7 +1650,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 tremorFeatureCount++;
             });
             
-            // Always show "Tremor: 20/20 features" when displaying tremor features
+            // Always show "Tremor: X/20 features"
             document.getElementById('tremor-feature-count').textContent = `Tremor: ${Math.min(tremorFeatureCount, MAX_FEATURES_PER_SECTION)}/${MAX_FEATURES_PER_SECTION} features`;
         } else {
             tremorFeaturesSection.style.display = 'none';
