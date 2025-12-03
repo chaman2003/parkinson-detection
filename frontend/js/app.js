@@ -1448,9 +1448,9 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             voiceFeaturesSection.style.display = 'block';
             voiceFeaturesGrid.innerHTML = '';
             
-            // Get features dictionary (the simplified features for display)
-            const featuresDict = results.features || {};
-            console.log('Simplified Features:', featuresDict);
+            // Get full audio features dictionary for display (not just key features)
+            const featuresDict = results.audio_features || results.features || {};
+            console.log('Voice Features:', featuresDict);
             
             // Convert to array and ALWAYS show exactly MAX_FEATURES_PER_SECTION voice features
             let voiceFeatures = [];
