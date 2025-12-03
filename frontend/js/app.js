@@ -1333,9 +1333,25 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         // Update confidence circles with animations (values already 0-100)
         let overallColor = null;
         if (results.prediction === 'Not Affected') {
-            overallColor = '#27ae60'; // Force Green for healthy results (high confidence is good)
+            overallColor = '#27ae60'; // Force Green for healthy results
         }
-        this.updateConfidenceCircle('overall-circle', 'overall-percentage', results.confidence, overallColor);
+        
+        // Use risk_score if available (Probability), otherwise fallback to calculated risk
+        // This ensures the circle shows the Risk Level (e.g. 6%) while the badge shows Confidence (94%)
+        let overallValue;
+        if (results.risk_score !== undefined) {
+            overallValue = results.risk_score;
+        } else {
+            // Fallback: Calculate risk from confidence if risk_score is missing
+            // If Healthy (Not Affected) with 94% confidence, Risk is 6%
+            if (results.prediction === 'Not Affected') {
+                overallValue = Math.max(0, 100 - results.confidence);
+            } else {
+                overallValue = results.confidence;
+            }
+        }
+        
+        this.updateConfidenceCircle('overall-circle', 'overall-percentage', overallValue, overallColor);
         
         // Show/hide voice confidence card
         const voiceCard = document.getElementById('voice-confidence-card');
