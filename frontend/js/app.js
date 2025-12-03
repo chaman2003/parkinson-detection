@@ -1341,19 +1341,9 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         const voiceCard = document.getElementById('voice-confidence-card');
         if (this.selectedTestMode === 'voice' || this.selectedTestMode === 'both') {
             voiceCard.style.display = 'block';
-            // Use voice_patterns (now Confidence) if available
-            const voiceValue = results.voice_patterns || 0;
-            
-            // Determine color: Green if healthy (low probability of Parkinson's), else default
-            let voiceColor = null;
-            // Check raw probability if available (voice_confidence is 0-100 prob of Parkinson's)
-            if (results.voice_confidence !== undefined && results.voice_confidence < 50) {
-                voiceColor = '#27ae60'; // Green for healthy
-            } else if (results.prediction === 'Not Affected' && this.selectedTestMode === 'voice') {
-                voiceColor = '#27ae60'; // Fallback for voice-only mode
-            }
-            
-            this.updateConfidenceCircle('voice-circle', 'voice-percentage', voiceValue, voiceColor);
+            // Use voice_patterns if available, fallback to voice_confidence (already 0-100)
+            const voiceValue = results.voice_patterns || results.voice_confidence || 0;
+            this.updateConfidenceCircle('voice-circle', 'voice-percentage', voiceValue, overallColor);
         } else {
             voiceCard.style.display = 'none';
         }
@@ -1362,18 +1352,9 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         const tremorCard = document.getElementById('tremor-confidence-card');
         if (this.selectedTestMode === 'tremor' || this.selectedTestMode === 'both') {
             tremorCard.style.display = 'block';
-            // Use motion_patterns (now Confidence) if available
-            const tremorValue = results.motion_patterns || 0;
-            
-            // Determine color: Green if healthy
-            let tremorColor = null;
-            if (results.tremor_confidence !== undefined && results.tremor_confidence < 50) {
-                tremorColor = '#27ae60'; // Green for healthy
-            } else if (results.prediction === 'Not Affected' && this.selectedTestMode === 'tremor') {
-                tremorColor = '#27ae60'; // Fallback
-            }
-            
-            this.updateConfidenceCircle('tremor-circle', 'tremor-percentage', tremorValue, tremorColor);
+            // Use motion_patterns if available, fallback to tremor_confidence (already 0-100)
+            const tremorValue = results.motion_patterns || results.tremor_confidence || 0;
+            this.updateConfidenceCircle('tremor-circle', 'tremor-percentage', tremorValue, overallColor);
         } else {
             tremorCard.style.display = 'none';
         }
