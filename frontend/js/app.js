@@ -1436,7 +1436,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     }
 
     updateDetailedFeatures(results) {
-        // Update feature counts
+        const MAX_FEATURES_PER_SECTION = 20;
         let voiceFeatureCount = 0;
         let tremorFeatureCount = 0;
 
@@ -1452,7 +1452,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const featuresDict = results.features || {};
             console.log('Simplified Features:', featuresDict);
             
-            // Convert to array and limit to top 20 features
+            // Convert to array and limit to top MAX_FEATURES_PER_SECTION features
             let voiceFeatures = [];
             const featureKeys = Object.keys(featuresDict);
 
@@ -1470,7 +1470,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                         const bVal = typeof b.value === 'number' ? b.value : 0;
                         return Math.abs(bVal) - Math.abs(aVal); // Sort by absolute value descending
                     })
-                    .slice(0, 20); // Limit to top 20 features
+                    .slice(0, MAX_FEATURES_PER_SECTION); // Limit to top 20 features
                 
                 voiceFeatures = sortedFeatures;
             } else {
@@ -1497,7 +1497,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 voiceFeatureCount++;
             });
             
-            document.getElementById('voice-feature-count').textContent = `Top ${voiceFeatureCount} features`;
+            document.getElementById('voice-feature-count').textContent = `Voice: ${voiceFeatureCount}/${MAX_FEATURES_PER_SECTION} features`;
         } else {
             voiceFeaturesSection.style.display = 'none';
         }
@@ -1514,7 +1514,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             const rawTremorFeatures = results.tremor_features || results.raw_features || {};
             console.log('Raw Tremor Features:', rawTremorFeatures);
             
-            // Convert to array and limit to top 20 features
+            // Convert to array and limit to top MAX_FEATURES_PER_SECTION features
             let tremorFeatures = [];
             const featureKeys = Object.keys(rawTremorFeatures);
 
@@ -1536,7 +1536,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                         const bVal = typeof b.value === 'number' ? b.value : 0;
                         return Math.abs(bVal) - Math.abs(aVal); // Sort by absolute value descending
                     })
-                    .slice(0, 20); // Limit to top 20 features
+                    .slice(0, MAX_FEATURES_PER_SECTION); // Limit to top 20 features
                 
                 tremorFeatures = allFeatures;
             } else {
@@ -1562,7 +1562,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 tremorFeatureCount++;
             });
             
-            document.getElementById('tremor-feature-count').textContent = `Top ${tremorFeatureCount} features`;
+            document.getElementById('tremor-feature-count').textContent = `Tremor: ${tremorFeatureCount}/${MAX_FEATURES_PER_SECTION} features`;
         } else {
             tremorFeaturesSection.style.display = 'none';
         }
