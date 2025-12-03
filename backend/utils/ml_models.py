@@ -268,11 +268,15 @@ class ParkinsonMLPipeline:
             comprehensive_insights['personalized'] = voice_insights.get('personalized_analysis', {})
         
         # Convert to 0-100 scale for user display
+        # Calculate confidence of the PREDICTION (not just class 1 probability)
+        # If prob is 0.05 (Healthy), confidence is 0.95 (95%)
+        final_confidence = combined_conf if combined_conf >= 0.5 else (1.0 - combined_conf)
+        
         result = {
             'prediction': combined_pred,
-            'confidence': round(float(combined_conf) * 100, 2),  # Convert to 0-100
-            'voice_confidence': round(float(voice_conf) * 100, 2),  # Convert to 0-100
-            'tremor_confidence': round(float(tremor_conf) * 100, 2),  # Convert to 0-100
+            'confidence': round(float(final_confidence) * 100, 2),  # Confidence of the specific prediction
+            'voice_confidence': round(float(voice_conf) * 100, 2),  # Probability of Parkinson's (0-100)
+            'tremor_confidence': round(float(tremor_conf) * 100, 2),  # Probability of Parkinson's (0-100)
             'voice_patterns': round(float(voice_conf) * 100, 2),  # Voice pattern strength 0-100
             'motion_patterns': round(float(tremor_conf) * 100, 2),  # Motion pattern strength 0-100
             'features': key_features,  # Simplified 0-100 scale features for display

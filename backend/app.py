@@ -604,14 +604,19 @@ def analyze_data_stream():
                         if dataset_match.get('voice_match', {}).get('matched'):
                             similarity = dataset_match['voice_match'].get('similarity', 0)
                             logger.info(f"  - Voice: {similarity:.1%} similar to known sample")
-                        if dataset_match.get('tremor_match', {}).get('matched'):
-                            similarity = dataset_match['tremor_match'].get('similarity', 0)
+                        
+                        tremor_match = dataset_match.get('tremor_match')
+                        if tremor_match and tremor_match.get('matched'):
+                            similarity = tremor_match.get('similarity', 0)
                             logger.info(f"  - Tremor: {similarity:.1%} similar to known sample")
                     else:
                         logger.info("✓ New/Unique Sample: No match in training dataset (this is normal for new patients)")
                         # Show best similarities even when not matched
                         voice_sim = dataset_match.get('voice_match', {}).get('best_similarity', 0) if dataset_match.get('voice_match') else 0
-                        tremor_sim = dataset_match.get('tremor_match', {}).get('best_similarity', 0) if dataset_match.get('tremor_match') else 0
+                        
+                        tremor_match = dataset_match.get('tremor_match')
+                        tremor_sim = tremor_match.get('best_similarity', 0) if tremor_match else 0
+                        
                         if voice_sim > 0:
                             logger.info(f"  - Voice similarity: {voice_sim:.1%} (threshold: 95%)")
                         if tremor_sim > 0:

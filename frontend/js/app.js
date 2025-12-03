@@ -1192,8 +1192,17 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             // Add audio only if voice or both
             if (testMode === 'voice' || testMode === 'both') {
                 if (audioBlob) {
-                    // Use original filename if available (for uploads), otherwise default
-                    const filename = audioBlob.name || 'recording.webm';
+                    // Use original filename if available (for uploads), otherwise determine from blob type
+                    let filename = audioBlob.name;
+                    if (!filename) {
+                        // Determine extension from blob type
+                        const type = audioBlob.type || '';
+                        let ext = 'webm';
+                        if (type.includes('wav')) ext = 'wav';
+                        else if (type.includes('ogg')) ext = 'ogg';
+                        else if (type.includes('mp3')) ext = 'mp3';
+                        filename = `recording.${ext}`;
+                    }
                     formData.append('audio', audioBlob, filename);
                 }
             }
