@@ -1896,7 +1896,8 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     
     updateVoiceSampleUI() {
         const sampleNum = this.calibrationState.voiceSampleIndex + 1;
-        document.getElementById('voice-sample-num').textContent = sampleNum;
+        const sampleNumEl = document.getElementById('voice-sample-num');
+        if (sampleNumEl) sampleNumEl.textContent = sampleNum;
         
         // Update sample dots
         document.querySelectorAll('#calibration-voice .sample-dot').forEach((dot, i) => {
@@ -1905,7 +1906,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             if (i === this.calibrationState.voiceSampleIndex) dot.classList.add('active');
         });
         
-        // Reset button
+        // Reset button - ensure it's re-enabled
         const btn = document.getElementById('calibration-voice-record-btn');
         if (btn) {
             btn.innerHTML = '<span class="record-icon">🎤</span><span class="record-text">Start Recording</span>';
@@ -1914,21 +1915,35 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         }
         
         // Reset timer
-        document.getElementById('calibration-voice-timer').textContent = '10s';
-        document.getElementById('calibration-voice-timer').classList.remove('active');
+        const timerEl = document.getElementById('calibration-voice-timer');
+        if (timerEl) {
+            timerEl.textContent = '10s';
+            timerEl.classList.remove('active');
+        }
         
         // Reset visualizer
         const visualizer = document.getElementById('calibration-voice-visualizer');
-        visualizer.classList.remove('recording');
-        visualizer.innerHTML = '<div class="visualizer-placeholder"><span>🎤</span><p>Ready to record</p></div>';
+        if (visualizer) {
+            visualizer.classList.remove('recording');
+            visualizer.innerHTML = '<div class="visualizer-placeholder"><span>🎤</span><p>Ready to record</p></div>';
+        }
         
         // Clear status
-        document.getElementById('calibration-voice-status').textContent = '';
+        const statusEl = document.getElementById('calibration-voice-status');
+        if (statusEl) {
+            statusEl.textContent = '';
+            statusEl.className = 'calibration-status';
+        }
+        
+        // Ensure calibration state is reset for next recording
+        this.calibrationState.isCalibrating = false;
+        this.calibrationState.audioData = [];
     }
     
     updateTremorSampleUI() {
         const sampleNum = this.calibrationState.tremorSampleIndex + 1;
-        document.getElementById('tremor-sample-num').textContent = sampleNum;
+        const sampleNumEl = document.getElementById('tremor-sample-num');
+        if (sampleNumEl) sampleNumEl.textContent = sampleNum;
         
         // Update sample dots
         document.querySelectorAll('#calibration-tremor .sample-dot').forEach((dot, i) => {
@@ -1937,7 +1952,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             if (i === this.calibrationState.tremorSampleIndex) dot.classList.add('active');
         });
         
-        // Reset button
+        // Reset button - ensure it's re-enabled
         const btn = document.getElementById('calibration-tremor-record-btn');
         if (btn) {
             btn.innerHTML = '<span class="record-icon">📱</span><span class="record-text">Start Recording</span>';
@@ -1946,15 +1961,36 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         }
         
         // Reset timer
-        document.getElementById('calibration-tremor-timer').textContent = '15s';
-        document.getElementById('calibration-tremor-timer').classList.remove('active');
+        const timerEl = document.getElementById('calibration-tremor-timer');
+        if (timerEl) {
+            timerEl.textContent = '15s';
+            timerEl.classList.remove('active');
+        }
         
         // Reset visualizer
         const visualizer = document.getElementById('calibration-tremor-visualizer');
-        visualizer.classList.remove('recording');
+        if (visualizer) {
+            visualizer.classList.remove('recording');
+        }
+        
+        // Reset axis values
+        const accelX = document.getElementById('cal-accel-x');
+        const accelY = document.getElementById('cal-accel-y');
+        const accelZ = document.getElementById('cal-accel-z');
+        if (accelX) accelX.textContent = '0.00';
+        if (accelY) accelY.textContent = '0.00';
+        if (accelZ) accelZ.textContent = '0.00';
         
         // Clear status
-        document.getElementById('calibration-tremor-status').textContent = '';
+        const statusEl = document.getElementById('calibration-tremor-status');
+        if (statusEl) {
+            statusEl.textContent = '';
+            statusEl.className = 'calibration-status';
+        }
+        
+        // Ensure calibration state is reset for next recording
+        this.calibrationState.isCalibrating = false;
+        this.calibrationState.motionData = [];
     }
     
     async startCalibrationVoiceRecording() {
@@ -2000,7 +2036,18 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             };
             
             mediaRecorder.onstop = () => {
-                this.processCalibrationVoiceSample();
+                // Only process if we haven't already (avoid double processing)
+                if (this.calibrationState.mediaRecorder) {
+                    this.calibrationState.mediaRecorder = null;
+                    this.processCalibrationVoiceSample();
+                }
+            };
+            
+            mediaRecorder.onerror = (e) => {
+                console.error('MediaRecorder error:', e);
+                this.calibrationState.isCalibrating = false;
+                this.showCalibrationStatus('calibration-voice-status', 'Recording error. Please try again.', 'error');
+                this.updateVoiceSampleUI();
             };
             
             this.calibrationState.mediaRecorder = mediaRecorder;
@@ -2008,22 +2055,29 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
             // Update UI
             const btn = document.getElementById('calibration-voice-record-btn');
-            btn.innerHTML = '<span class="record-icon">⏹️</span><span class="record-text">Recording...</span>';
-            btn.classList.add('recording');
-            btn.disabled = true;
+            if (btn) {
+                btn.innerHTML = '<span class="record-icon">⏹️</span><span class="record-text">Recording...</span>';
+                btn.classList.add('recording');
+                btn.disabled = true;
+            }
             
             const visualizer = document.getElementById('calibration-voice-visualizer');
-            visualizer.classList.add('recording');
+            if (visualizer) {
+                visualizer.classList.add('recording');
+            }
             this.startCalibrationAudioVisualization(analyser);
             
             // Start countdown timer
             const timerEl = document.getElementById('calibration-voice-timer');
-            timerEl.classList.add('active');
+            if (timerEl) {
+                timerEl.classList.add('active');
+            }
             let timeLeft = 10;
+            timerEl.textContent = `${timeLeft}s`;
             
             const timerInterval = setInterval(() => {
                 timeLeft--;
-                timerEl.textContent = `${timeLeft}s`;
+                if (timerEl) timerEl.textContent = `${timeLeft}s`;
                 
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
@@ -2032,6 +2086,14 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             }, 1000);
             
             this.calibrationState.timerInterval = timerInterval;
+            
+            // Safety timeout - force stop after 15 seconds in case something goes wrong
+            this.calibrationState.safetyTimeout = setTimeout(() => {
+                if (this.calibrationState.isCalibrating) {
+                    console.warn('Safety timeout triggered - forcing stop');
+                    this.stopCalibrationVoiceRecording();
+                }
+            }, 15000);
             
             this.showCalibrationStatus('calibration-voice-status', 'Recording... Speak clearly', 'info');
             
@@ -2077,41 +2139,94 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     }
     
     stopCalibrationVoiceRecording() {
+        // Clear safety timeout
+        if (this.calibrationState.safetyTimeout) {
+            clearTimeout(this.calibrationState.safetyTimeout);
+            this.calibrationState.safetyTimeout = null;
+        }
+        
+        // Clear timer interval
         if (this.calibrationState.timerInterval) {
             clearInterval(this.calibrationState.timerInterval);
+            this.calibrationState.timerInterval = null;
         }
         
-        if (this.calibrationState.mediaRecorder && this.calibrationState.mediaRecorder.state !== 'inactive') {
-            this.calibrationState.mediaRecorder.stop();
+        // Stop media recorder - this will trigger onstop which calls processCalibrationVoiceSample
+        const mediaRecorder = this.calibrationState.mediaRecorder;
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            try {
+                mediaRecorder.stop();
+            } catch (e) {
+                console.error('Error stopping media recorder:', e);
+                // If mediaRecorder.stop() fails, manually process
+                this.calibrationState.mediaRecorder = null;
+                this.calibrationState.isCalibrating = false;
+                this.processCalibrationVoiceSample();
+            }
+        } else if (!mediaRecorder) {
+            // MediaRecorder was already cleared (possibly by onstop), nothing to do
+            this.calibrationState.isCalibrating = false;
+        } else {
+            // MediaRecorder already inactive, process manually
+            this.calibrationState.mediaRecorder = null;
+            this.calibrationState.isCalibrating = false;
+            if (this.calibrationState.audioData && this.calibrationState.audioData.length > 0) {
+                this.processCalibrationVoiceSample();
+            } else {
+                // No data recorded, re-enable the button
+                this.updateVoiceSampleUI();
+                this.showCalibrationStatus('calibration-voice-status', 'No audio recorded. Please try again.', 'error');
+            }
         }
         
+        // Stop audio stream tracks
         if (this.calibrationState.audioStream) {
             this.calibrationState.audioStream.getTracks().forEach(track => track.stop());
+            this.calibrationState.audioStream = null;
         }
         
+        // Close audio context
         if (this.calibrationState.audioContext) {
-            this.calibrationState.audioContext.close();
+            try {
+                this.calibrationState.audioContext.close();
+            } catch (e) {
+                console.error('Error closing audio context:', e);
+            }
+            this.calibrationState.audioContext = null;
         }
-        
-        this.calibrationState.isCalibrating = false;
     }
     
     async processCalibrationVoiceSample() {
         this.showCalibrationStatus('calibration-voice-status', 'Processing sample...', 'info');
         
+        // Ensure we're not in calibrating state during processing
+        this.calibrationState.isCalibrating = false;
+        
         try {
+            // Check if we have audio data
+            if (!this.calibrationState.audioData || this.calibrationState.audioData.length === 0) {
+                throw new Error('No audio data recorded');
+            }
+            
             const audioBlob = new Blob(this.calibrationState.audioData, { type: 'audio/webm' });
             
-            // Send to backend
+            // Send to backend with timeout
             const formData = new FormData();
             formData.append('audio', audioBlob, 'calibration.webm');
             formData.append('user_id', this.calibrationState.userId);
             formData.append('sample_index', this.calibrationState.voiceSampleIndex);
             
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
             const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/record`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             const result = await response.json();
             
@@ -2140,13 +2255,23 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
         } catch (error) {
             console.error('Error processing voice sample:', error);
-            this.showCalibrationStatus('calibration-voice-status', `Error: ${error.message}`, 'error');
             
-            // Re-enable button to retry
-            const btn = document.getElementById('calibration-voice-record-btn');
-            btn.innerHTML = '<span class="record-icon">🎤</span><span class="record-text">Retry Recording</span>';
-            btn.classList.remove('recording');
-            btn.disabled = false;
+            let errorMessage = error.message;
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out. Please try again.';
+            }
+            
+            this.showCalibrationStatus('calibration-voice-status', `Error: ${errorMessage}`, 'error');
+            
+            // Re-enable button to retry after a brief delay
+            setTimeout(() => {
+                const btn = document.getElementById('calibration-voice-record-btn');
+                if (btn) {
+                    btn.innerHTML = '<span class="record-icon">🎤</span><span class="record-text">Retry Recording</span>';
+                    btn.classList.remove('recording');
+                    btn.disabled = false;
+                }
+            }, 500);
         }
     }
     
@@ -2226,26 +2351,65 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         
         this.calibrationState.timerInterval = timerInterval;
         
+        // Safety timeout - force stop after 20 seconds in case something goes wrong
+        this.calibrationState.safetyTimeout = setTimeout(() => {
+            if (this.calibrationState.isCalibrating) {
+                console.warn('Safety timeout triggered for tremor - forcing stop');
+                this.stopCalibrationTremorRecording();
+            }
+        }, 20000);
+        
         this.showCalibrationStatus('calibration-tremor-status', 'Recording... Keep phone steady', 'info');
     }
     
     stopCalibrationTremorRecording() {
+        // Clear safety timeout
+        if (this.calibrationState.safetyTimeout) {
+            clearTimeout(this.calibrationState.safetyTimeout);
+            this.calibrationState.safetyTimeout = null;
+        }
+        
+        // Clear timer interval
         if (this.calibrationState.timerInterval) {
             clearInterval(this.calibrationState.timerInterval);
+            this.calibrationState.timerInterval = null;
         }
         
+        // Remove motion event listener
         if (this.calibrationState.motionHandler) {
             window.removeEventListener('devicemotion', this.calibrationState.motionHandler);
+            this.calibrationState.motionHandler = null;
         }
         
+        // Mark as not calibrating
         this.calibrationState.isCalibrating = false;
-        this.processCalibrationTremorSample();
+        
+        // Check if we have motion data before processing
+        if (this.calibrationState.motionData && this.calibrationState.motionData.length > 10) {
+            this.processCalibrationTremorSample();
+        } else {
+            // Not enough data, re-enable button
+            this.updateTremorSampleUI();
+            this.showCalibrationStatus('calibration-tremor-status', 'Not enough motion data. Please try again and keep phone moving slightly.', 'error');
+        }
     }
     
     async processCalibrationTremorSample() {
         this.showCalibrationStatus('calibration-tremor-status', 'Processing sample...', 'info');
         
+        // Ensure we're not in calibrating state during processing
+        this.calibrationState.isCalibrating = false;
+        
         try {
+            // Check if we have motion data
+            if (!this.calibrationState.motionData || this.calibrationState.motionData.length < 10) {
+                throw new Error('Insufficient motion data recorded');
+            }
+            
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
             // Send tremor data to backend
             const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/record-tremor`, {
                 method: 'POST',
@@ -2256,8 +2420,11 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                     user_id: this.calibrationState.userId,
                     sample_index: this.calibrationState.tremorSampleIndex,
                     motion_data: this.calibrationState.motionData
-                })
+                }),
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             const result = await response.json();
             
@@ -2286,13 +2453,23 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
         } catch (error) {
             console.error('Error processing tremor sample:', error);
-            this.showCalibrationStatus('calibration-tremor-status', `Error: ${error.message}`, 'error');
             
-            // Re-enable button to retry
-            const btn = document.getElementById('calibration-tremor-record-btn');
-            btn.innerHTML = '<span class="record-icon">📱</span><span class="record-text">Retry Recording</span>';
-            btn.classList.remove('recording');
-            btn.disabled = false;
+            let errorMessage = error.message;
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out. Please try again.';
+            }
+            
+            this.showCalibrationStatus('calibration-tremor-status', `Error: ${errorMessage}`, 'error');
+            
+            // Re-enable button to retry after a brief delay
+            setTimeout(() => {
+                const btn = document.getElementById('calibration-tremor-record-btn');
+                if (btn) {
+                    btn.innerHTML = '<span class="record-icon">📱</span><span class="record-text">Retry Recording</span>';
+                    btn.classList.remove('recording');
+                    btn.disabled = false;
+                }
+            }, 500);
         }
     }
     
