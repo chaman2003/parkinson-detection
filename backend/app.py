@@ -496,28 +496,39 @@ def analyze_data_stream():
             audio_path = None
             
             if audio_file:
-                # Save as WebM first
-                webm_filename = f'audio_{timestamp}.webm'
-                webm_path = os.path.join(app.config['UPLOAD_FOLDER'], webm_filename)
-                audio_file.save(webm_path)
+                # Determine file extension
+                original_ext = os.path.splitext(audio_file.filename)[1].lower()
+                if not original_ext:
+                    original_ext = '.webm' # Default fallback
                 
-                # Convert to WAV for librosa compatibility
+                # Save with original extension
+                temp_filename = f'audio_{timestamp}{original_ext}'
+                temp_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+                audio_file.save(temp_path)
+                
+                # Target WAV path
                 wav_filename = f'audio_{timestamp}.wav'
                 wav_path = os.path.join(app.config['UPLOAD_FOLDER'], wav_filename)
                 
-                conversion_success = convert_webm_to_wav(webm_path, wav_path)
-                
-                if conversion_success and os.path.exists(wav_path):
-                    audio_path = wav_path
-                    try:
-                        os.remove(webm_path)  # Clean up WebM file
-                    except:
-                        pass
-                    logger.info(f"Successfully converted WebM to WAV: {wav_filename}")
+                # Convert if not already WAV
+                if original_ext != '.wav':
+                    conversion_success = convert_webm_to_wav(temp_path, wav_path)
+                    
+                    if conversion_success and os.path.exists(wav_path):
+                        audio_path = wav_path
+                        try:
+                            os.remove(temp_path)  # Clean up temp file
+                        except:
+                            pass
+                        logger.info(f"Successfully converted {original_ext} to WAV: {wav_filename}")
+                    else:
+                        # If conversion fails, try to use original file directly
+                        logger.warning(f"Conversion failed, attempting to process {original_ext} directly")
+                        audio_path = temp_path
                 else:
-                    # If conversion fails, try to use WebM directly (may fail in feature extraction)
-                    logger.warning("WebM to WAV conversion failed, attempting to process WebM directly")
-                    audio_path = webm_path
+                    # Already WAV, use directly
+                    audio_path = temp_path
+                    logger.info(f"Using uploaded WAV file directly: {wav_filename}")
             
             # Validation message based on test mode
             if test_mode == 'voice':
@@ -776,24 +787,36 @@ def analyze_data():
 
         # Save audio file temporarily
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        audio_filename = f'audio_{timestamp}.webm'
-        audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
-        audio_file.save(audio_path)
+        
+        # Determine file extension
+        original_ext = os.path.splitext(audio_file.filename)[1].lower()
+        if not original_ext:
+            original_ext = '.webm' # Default fallback
+            
+        temp_filename = f'audio_{timestamp}{original_ext}'
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+        audio_file.save(temp_path)
 
-        # Convert to WAV immediately for better compatibility
+        # Target WAV path
         wav_filename = f'audio_{timestamp}.wav'
         wav_path = os.path.join(app.config['UPLOAD_FOLDER'], wav_filename)
         
-        if convert_webm_to_wav(audio_path, wav_path):
-            logger.info(f"Converted uploaded WebM to WAV: {wav_path}")
-            # If conversion successful, use the WAV file
-            try:
-                os.remove(audio_path)
-            except:
-                pass
-            audio_path = wav_path
+        # Convert if not already WAV
+        if original_ext != '.wav':
+            if convert_webm_to_wav(temp_path, wav_path):
+                logger.info(f"Converted uploaded {original_ext} to WAV: {wav_path}")
+                # If conversion successful, use the WAV file
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
+                audio_path = wav_path
+            else:
+                logger.warning(f"Conversion failed in analyze endpoint, proceeding with original file")
+                audio_path = temp_path
         else:
-            logger.warning("WebM conversion failed in analyze endpoint, proceeding with original file")
+            logger.info(f"Using uploaded WAV file directly: {wav_filename}")
+            audio_path = temp_path
 
         # Enhanced logging with detailed progress
         print("\n" + "="*70)
