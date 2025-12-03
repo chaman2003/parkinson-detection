@@ -1774,20 +1774,30 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
     
     async checkCalibrationStatus() {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
             const response = await window.fetchWithNgrokBypass(
-                `${this.API_BASE_URL}/calibration/status?user_id=${this.calibrationState.userId}`
+                `${this.API_BASE_URL}/calibration/status?user_id=${this.calibrationState.userId}`,
+                { signal: controller.signal }
             );
+            
+            clearTimeout(timeoutId);
             
             if (response.ok) {
                 const status = await response.json();
                 this.updateCalibrationBadge(status.is_calibrated);
+                this.calibrationState.backendAvailable = true;
                 
                 if (status.is_calibrated) {
                     console.log('✅ User has calibrated model:', status);
                 }
+                return status;
             }
         } catch (error) {
+            this.calibrationState.backendAvailable = false;
             console.log('Could not check calibration status:', error);
+            return null;
         }
     }
     
@@ -1812,7 +1822,32 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             this.resetCalibrationUI();
-            this.checkCalibrationStatus();
+            
+            // Check if backend is available before showing calibration
+            this.checkCalibrationStatus().then(status => {
+                if (this.calibrationState.backendAvailable === false) {
+                    this.showCalibrationBackendError();
+                }
+            });
+        }
+    }
+    
+    showCalibrationBackendError() {
+        // Show error in intro section
+        const introSection = document.getElementById('calibration-intro');
+        if (introSection) {
+            const existingError = introSection.querySelector('.backend-error');
+            if (existingError) existingError.remove();
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'backend-error';
+            errorDiv.innerHTML = `
+                <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; text-align: center;">
+                    <p style="color: #dc2626; margin: 0 0 0.5rem 0; font-weight: 600;">⚠️ Backend Server Unavailable</p>
+                    <p style="color: #7f1d1d; margin: 0; font-size: 0.9rem;">Please start the backend server first:<br><code style="background: #fef2f2; padding: 0.25rem 0.5rem; border-radius: 4px;">cd backend && python app.py</code></p>
+                </div>
+            `;
+            introSection.insertBefore(errorDiv, introSection.firstChild);
         }
     }
     
@@ -2258,7 +2293,10 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
             let errorMessage = error.message;
             if (error.name === 'AbortError') {
-                errorMessage = 'Request timed out. Please try again.';
+                errorMessage = 'Request timed out. Please check your connection and try again.';
+            } else if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
+                errorMessage = 'Cannot connect to server. Please ensure the backend is running.';
+                this.calibrationState.backendAvailable = false;
             }
             
             this.showCalibrationStatus('calibration-voice-status', `Error: ${errorMessage}`, 'error');
@@ -2456,7 +2494,10 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
             let errorMessage = error.message;
             if (error.name === 'AbortError') {
-                errorMessage = 'Request timed out. Please try again.';
+                errorMessage = 'Request timed out. Please check your connection and try again.';
+            } else if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
+                errorMessage = 'Cannot connect to server. Please ensure the backend is running.';
+                this.calibrationState.backendAvailable = false;
             }
             
             this.showCalibrationStatus('calibration-tremor-status', `Error: ${errorMessage}`, 'error');
@@ -2496,6 +2537,10 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 }
             }, 800);
             
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for training
+            
             // Call backend to train model
             const response = await window.fetchWithNgrokBypass(`${this.API_BASE_URL}/calibration/train`, {
                 method: 'POST',
@@ -2504,9 +2549,11 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
                 },
                 body: JSON.stringify({
                     user_id: this.calibrationState.userId
-                })
+                }),
+                signal: controller.signal
             });
             
+            clearTimeout(timeoutId);
             clearInterval(progressInterval);
             
             const result = await response.json();
@@ -2533,8 +2580,32 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
             
         } catch (error) {
             console.error('Error training model:', error);
-            statusText.textContent = `Error: ${error.message}`;
+            
+            let errorMessage = error.message;
+            if (error.name === 'AbortError') {
+                errorMessage = 'Training timed out. Please try again.';
+            } else if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
+                errorMessage = 'Cannot connect to server. Please ensure the backend is running.';
+            }
+            
+            statusText.textContent = `Error: ${errorMessage}`;
             progressBar.style.background = '#ef4444';
+            
+            // Add retry button
+            const trainingSection = document.getElementById('calibration-training');
+            if (trainingSection && !trainingSection.querySelector('.retry-btn')) {
+                const retryBtn = document.createElement('button');
+                retryBtn.className = 'btn btn-primary retry-btn';
+                retryBtn.style.marginTop = '1rem';
+                retryBtn.innerHTML = '🔄 Retry Training';
+                retryBtn.onclick = () => {
+                    retryBtn.remove();
+                    progressBar.style.background = '';
+                    progressBar.style.width = '0%';
+                    this.trainPersonalizedModel();
+                };
+                trainingSection.appendChild(retryBtn);
+            }
         }
     }
     
