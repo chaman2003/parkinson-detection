@@ -272,13 +272,17 @@ class ParkinsonMLPipeline:
         # If prob is 0.05 (Healthy), confidence is 0.95 (95%)
         final_confidence = combined_conf if combined_conf >= 0.5 else (1.0 - combined_conf)
         
+        # Calculate individual confidences for display consistency
+        voice_final_conf = voice_conf if voice_conf >= 0.5 else (1.0 - voice_conf)
+        tremor_final_conf = tremor_conf if tremor_conf >= 0.5 else (1.0 - tremor_conf)
+        
         result = {
             'prediction': combined_pred,
             'confidence': round(float(final_confidence) * 100, 2),  # Confidence of the specific prediction
-            'voice_confidence': round(float(voice_conf) * 100, 2),  # Probability of Parkinson's (0-100)
-            'tremor_confidence': round(float(tremor_conf) * 100, 2),  # Probability of Parkinson's (0-100)
-            'voice_patterns': round(float(voice_conf) * 100, 2),  # Voice pattern strength 0-100
-            'motion_patterns': round(float(tremor_conf) * 100, 2),  # Motion pattern strength 0-100
+            'voice_confidence': round(float(voice_conf) * 100, 2),  # Probability of Parkinson's (0-100) - Keep raw for logic
+            'tremor_confidence': round(float(tremor_conf) * 100, 2),  # Probability of Parkinson's (0-100) - Keep raw for logic
+            'voice_patterns': round(float(voice_final_conf) * 100, 2),  # Voice Confidence (matches Overall)
+            'motion_patterns': round(float(tremor_final_conf) * 100, 2),  # Motion Confidence (matches Overall)
             'features': key_features,  # Simplified 0-100 scale features for display
             'raw_features': {**all_audio_features, **tremor_features},  # All raw features for detailed view
             'tremor_features': tremor_features,  # Explicit tremor features
