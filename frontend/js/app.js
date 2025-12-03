@@ -1331,7 +1331,11 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         }
 
         // Update confidence circles with animations (values already 0-100)
-        this.updateConfidenceCircle('overall-circle', 'overall-percentage', results.confidence);
+        let overallColor = null;
+        if (results.prediction === 'Not Affected') {
+            overallColor = '#27ae60'; // Force Green for healthy results (high confidence is good)
+        }
+        this.updateConfidenceCircle('overall-circle', 'overall-percentage', results.confidence, overallColor);
         
         // Show/hide voice confidence card
         const voiceCard = document.getElementById('voice-confidence-card');
@@ -1365,7 +1369,7 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         document.getElementById('download-results-btn').onclick = () => this.downloadResults(results);
     }
 
-    updateConfidenceCircle(circleId, percentageId, value) {
+    updateConfidenceCircle(circleId, percentageId, value, overrideColor = null) {
         // Value is already 0-100, no need to multiply
         const percentage = Math.round(value);
         const circle = document.getElementById(circleId);
@@ -1393,7 +1397,12 @@ if (typeof window.ParkinsonDetectionApp !== 'undefined') {
         }, 20);
         
         // Set color based on percentage
-        const gradient = percentage >= 70 ? '#e74c3c' : percentage >= 40 ? '#f39c12' : '#27ae60';
+        let gradient;
+        if (overrideColor) {
+            gradient = overrideColor;
+        } else {
+            gradient = percentage >= 70 ? '#e74c3c' : percentage >= 40 ? '#f39c12' : '#27ae60';
+        }
         circle.style.stroke = gradient;
     }
 
