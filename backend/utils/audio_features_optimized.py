@@ -24,6 +24,21 @@ class OptimizedAudioExtractor:
         self.n_mfcc = 13
         self.n_fft = 2048
         self.hop_length = 512
+    
+    def _sanitize_features(self, features):
+        """Replace NaN/Inf values with 0.0 to ensure valid JSON serialization"""
+        sanitized = {}
+        for key, value in features.items():
+            if isinstance(value, (float, np.floating)):
+                if np.isnan(value) or np.isinf(value):
+                    sanitized[key] = 0.0
+                else:
+                    sanitized[key] = float(value)
+            elif isinstance(value, (int, np.integer)):
+                sanitized[key] = int(value)
+            else:
+                sanitized[key] = value
+        return sanitized
         
     def extract_features_fast(self, audio_path):
         """
@@ -113,6 +128,9 @@ class OptimizedAudioExtractor:
             # Add temporal and harmonic features (fast)
             features.update(self._extract_temporal_fast(y, sr))
             features.update(self._extract_harmonic_fast(y, sr))
+            
+            # Sanitize all features - replace NaN/Inf with 0.0
+            features = self._sanitize_features(features)
             
             # Ensure we have exactly 133 features
             feature_count = len(features)

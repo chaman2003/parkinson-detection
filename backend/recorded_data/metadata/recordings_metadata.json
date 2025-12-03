@@ -1034,6 +1034,23 @@
         "Postural Stability": 100.0,
         "Motion Variability": 0.0
       }
+    },
+    {
+      "recording_id": "voice_20251203_202524_350288",
+      "timestamp": "2025-12-03T20:25:24.352943",
+      "file_path": "recorded_data\\voice_recordings\\healthy\\voice_20251203_202524_350288.wav",
+      "predicted_label": "healthy",
+      "prediction_value": 0,
+      "confidence": 47.51,
+      "voice_confidence": 50.0,
+      "user_label": null,
+      "features": {
+        "Voice Stability": 100.0,
+        "Voice Quality": 100.0,
+        "Tremor Frequency": 0.0,
+        "Postural Stability": 98.9,
+        "Motion Variability": 1.1
+      }
     }
   ],
   "tremor_recordings": [
@@ -1468,9 +1485,18 @@
       "confidence": 31.77,
       "tremor_confidence": 5.0,
       "user_label": null
+    },
+    {
+      "recording_id": "tremor_20251203_202524_358096",
+      "timestamp": "2025-12-03T20:25:24.368365",
+      "csv_file": "recorded_data\\tremor_data\\recorded_tremor_data.csv",
+      "prediction": 0,
+      "confidence": 47.51,
+      "tremor_confidence": 45.02,
+      "user_label": null
     }
   ],
-  "total_recordings": 125,
+  "total_recordings": 127,
   "combined_analyses": [
     {
       "timestamp": "2025-10-04T20:36:33.092502",
@@ -1576,6 +1602,13 @@
       "tremor_recording_id": "tremor_20251203_170544_380411",
       "combined_prediction": "Not Affected",
       "combined_confidence": 31.77
+    },
+    {
+      "timestamp": "2025-12-03T20:25:24.371753",
+      "voice_recording_id": "voice_20251203_202524_350288",
+      "tremor_recording_id": "tremor_20251203_202524_358096",
+      "combined_prediction": "Not Affected",
+      "combined_confidence": 47.51
     }
   ]
 }

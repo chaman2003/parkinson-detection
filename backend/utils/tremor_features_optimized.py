@@ -17,6 +17,24 @@ class OptimizedTremorExtractor:
     def __init__(self):
         self.tremor_freq_range = (4, 6)  # Parkinson's tremor frequency band
         self.min_samples = 30  # Minimum samples required
+    
+    def _sanitize_features(self, features):
+        """Replace NaN/Inf values with 0.0 to ensure valid JSON serialization"""
+        sanitized = {}
+        for key, value in features.items():
+            if key.startswith('_'):
+                # Keep metadata as-is
+                sanitized[key] = value
+            elif isinstance(value, (float, np.floating)):
+                if np.isnan(value) or np.isinf(value):
+                    sanitized[key] = 0.0
+                else:
+                    sanitized[key] = float(value)
+            elif isinstance(value, (int, np.integer)):
+                sanitized[key] = int(value)
+            else:
+                sanitized[key] = value
+        return sanitized
         
     def extract_features_fast(self, motion_data):
         """
@@ -70,6 +88,9 @@ class OptimizedTremorExtractor:
             
             # Mark as active motion detected
             features['_idle_detected'] = False
+            
+            # Sanitize all features to remove NaN/Inf values
+            features = self._sanitize_features(features)
             
             logger.info(f"✓ Fast extraction: {len(features)} tremor features from {len(motion_data)} samples")
             
